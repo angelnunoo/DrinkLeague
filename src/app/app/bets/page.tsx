@@ -2,14 +2,24 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, getMyLeagues } from "@/lib/data";
-import { ensureWeeklyMarketAction, createSuperBoostAction } from "@/app/actions";
+import {
+  ensureWeeklyMarketAction,
+  createSuperBoostAction,
+  settleBetMarketAction,
+} from "@/app/actions";
 import { PlaceBetForm } from "@/components/place-bet-form";
 import { RankingPodium } from "@/components/ui/podium";
 
 export default async function BetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ league?: string; placed?: string; boost?: string; error?: string }>;
+  searchParams: Promise<{
+    league?: string;
+    placed?: string;
+    boost?: string;
+    settled?: string;
+    error?: string;
+  }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
@@ -263,18 +273,35 @@ export default async function BetsPage({
                                 {odds.toFixed(2)}
                               </p>
                             </div>
-                            {isCaptain ? (
-                              <form action={createSuperBoostAction.bind(null, sel.id)}>
-                                <button
-                                  type="submit"
-                                  className="rounded-full border border-[var(--gold)] px-3 py-1 text-[10px] font-bold text-[var(--gold)]"
-                                >
-                                  SuperAumento
-                                </button>
-                              </form>
+                            {isCaptain && market.status === "open" ? (
+                              <div className="flex flex-col gap-1">
+                                <form action={createSuperBoostAction.bind(null, sel.id)}>
+                                  <button
+                                    type="submit"
+                                    className="rounded-full border border-[var(--gold)] px-3 py-1 text-[10px] font-bold text-[var(--gold)]"
+                                  >
+                                    SuperAumento
+                                  </button>
+                                </form>
+                                <form action={settleBetMarketAction}>
+                                  <input type="hidden" name="market_id" value={market.id} />
+                                  <input type="hidden" name="winning_selection_id" value={sel.id} />
+                                  <input type="hidden" name="league_id" value={leagueId ?? ""} />
+                                  <button
+                                    type="submit"
+                                    className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] font-bold text-[var(--muted)]"
+                                  >
+                                    Resolver ganador
+                                  </button>
+                                </form>
+                              </div>
                             ) : null}
                           </div>
-                          <PlaceBetForm selectionId={sel.id} />
+                          {market.status === "open" ? (
+                            <PlaceBetForm selectionId={sel.id} />
+                          ) : (
+                            <p className="mt-2 text-xs text-[var(--muted)]">Mercado resuelto</p>
+                          )}
                         </li>
                       );
                     })}

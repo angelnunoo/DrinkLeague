@@ -13,7 +13,26 @@ export type NotifyCategory =
   | "events"
   | "birthday"
   | "challenges"
-  | "weekly";
+  | "weekly"
+  | "seasons"
+  | "records";
+
+export const NOTIFY_CATEGORY_LABELS: Record<NotifyCategory | string, string> = {
+  rivalry: "Rivalidades",
+  ranking: "Clasificación",
+  achievement: "Logros",
+  chemistry: "Química",
+  bets: "Apuestas",
+  boost: "SuperAumentos",
+  mvp: "MVP",
+  games: "Juegos",
+  events: "Eventos",
+  birthday: "Cumpleaños",
+  challenges: "Retos",
+  weekly: "Resúmenes",
+  seasons: "Temporadas",
+  records: "Récords",
+};
 
 function configureWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;

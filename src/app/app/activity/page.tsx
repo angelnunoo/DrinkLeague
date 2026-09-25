@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { markAllNotificationsReadAction } from "@/app/actions";
 import { PushRegistrar } from "@/components/push-registrar";
 import { NotificationPrefsForm } from "@/components/notification-prefs-form";
+import { NOTIFY_CATEGORY_LABELS } from "@/lib/notifications";
 
 const CATEGORIES = [
   { key: "all", label: "Todas" },
@@ -12,30 +13,34 @@ const CATEGORIES = [
   { key: "ranking", label: "Clasificación" },
   { key: "achievement", label: "Logros" },
   { key: "chemistry", label: "Química" },
+  { key: "mvp", label: "MVP" },
   { key: "bets", label: "Apuestas" },
   { key: "boost", label: "SuperAumentos" },
-  { key: "mvp", label: "MVP" },
   { key: "games", label: "Juegos" },
   { key: "events", label: "Eventos" },
   { key: "birthday", label: "Cumpleaños" },
   { key: "challenges", label: "Retos" },
+  { key: "seasons", label: "Temporadas" },
+  { key: "records", label: "Récords" },
   { key: "weekly", label: "Resúmenes" },
 ] as const;
 
 export default async function ActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cat?: string; settings?: string }>;
+  searchParams: Promise<{ cat?: string; settings?: string; q?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   const sp = await searchParams;
   const cat = sp.cat || "all";
+  const q = (sp.q || "").trim();
   const showSettings = sp.settings === "1";
 
   const supabase = await createClient();
   await supabase.rpc("ensure_notification_prefs", { p_user_id: profile.id });
   await supabase.rpc("notify_birthday_today");
+  await supabase.rpc("refresh_user_persona", { p_user_id: profile.id });
 
   // Sunday weekly summary (Europe/Madrid)
   const madridDay = new Intl.DateTimeFormat("en-US", {
@@ -51,9 +56,10 @@ export default async function ActivityPage({
     .select("*")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false })
-    .limit(80);
+    .limit(100);
 
   if (cat !== "all") query = query.eq("category", cat);
+  if (q) query = query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
 
   const [{ data: items }, { data: prefs }, { count: unread }] = await Promise.all([
     query,
@@ -64,6 +70,16 @@ export default async function ActivityPage({
       .eq("user_id", profile.id)
       .eq("is_read", false),
   ]);
+
+  const filterHref = (next: { cat?: string; q?: string }) => {
+    const params = new URLSearchParams();
+    const c = next.cat ?? cat;
+    const search = next.q ?? q;
+    if (c && c !== "all") params.set("cat", c);
+    if (search) params.set("q", search);
+    const s = params.toString();
+    return s ? `/app/activity?${s}` : "/app/activity";
+  };
 
   return (
     <section className="animate-rise space-y-5">
@@ -90,11 +106,24 @@ export default async function ActivityPage({
         </div>
       ) : (
         <>
+          <form action="/app/activity" method="get" className="flex gap-2">
+            {cat !== "all" ? <input type="hidden" name="cat" value={cat} /> : null}
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar actividad…"
+              className="flex-1 rounded-xl border border-[var(--line)] bg-transparent px-3 py-2.5 text-sm outline-none focus:border-[var(--amber)]"
+            />
+            <button type="submit" className="btn-ghost text-xs shrink-0">
+              Buscar
+            </button>
+          </form>
+
           <div className="flex gap-2 overflow-x-auto pb-1">
             {CATEGORIES.map((c) => (
               <Link
                 key={c.key}
-                href={c.key === "all" ? "/app/activity" : `/app/activity?cat=${c.key}`}
+                href={filterHref({ cat: c.key })}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
                   cat === c.key
                     ? "bg-[var(--ink)] text-[#0b1512]"
@@ -124,7 +153,7 @@ export default async function ActivityPage({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
-                        {n.category}
+                        {NOTIFY_CATEGORY_LABELS[n.category] ?? n.category}
                       </p>
                       <p className="font-semibold">{n.title}</p>
                       <p className="text-sm text-[var(--muted)]">{n.body}</p>
@@ -141,7 +170,9 @@ export default async function ActivityPage({
             ))}
             {!items?.length ? (
               <li className="surface p-6 text-center text-sm text-[var(--muted)]">
-                Aún no hay actividad. Cuando pase algo real (rival, logro, apuesta…), aparecerá aquí.
+                {q
+                  ? "Ninguna actividad coincide con la búsqueda."
+                  : "Aún no hay actividad. Cuando pase algo real (rival, logro, apuesta…), aparecerá aquí."}
               </li>
             ) : null}
           </ul>

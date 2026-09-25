@@ -399,10 +399,64 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
   redirect(`/app/games/${data}`);
 }
 
+async function notifyGameMilestone(sessionId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: session } = await supabase
+    .from("game_sessions")
+    .select("id, game_type, status, state, created_by")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (!session || session.created_by !== user.id) return;
+
+  const state = (session.state ?? {}) as Record<string, unknown>;
+  if (session.game_type === "duelo" && session.status === "finished") {
+    const streak = Number(state.best_streak ?? state.streak ?? 0);
+    if (streak >= 3) {
+      await supabase.rpc("notify_user", {
+        p_user_id: user.id,
+        p_category: "games",
+        p_title: "⚔️ Nueva mejor racha en Duelo.",
+        p_body: `Racha de ${streak} en Duelo.`,
+        p_href: `/app/games/${sessionId}`,
+        p_payload: { session_id: sessionId, streak },
+      });
+    }
+  }
+  if (session.game_type === "peaje" && (state.perfect === true || state.result === "perfect")) {
+    await supabase.rpc("notify_user", {
+      p_user_id: user.id,
+      p_category: "games",
+      p_title: "🚧 Has completado un Peaje perfecto.",
+      p_body: "Tirada limpia en Peaje.",
+      p_href: `/app/games/${sessionId}`,
+      p_payload: { session_id: sessionId },
+    });
+  }
+  if (session.game_type === "rey") {
+    const kings = Number(state.kings_found ?? state.rey_count ?? state.total_reyes ?? 0);
+    if ([10, 25, 50, 100].includes(kings)) {
+      await supabase.rpc("notify_user", {
+        p_user_id: user.id,
+        p_category: "games",
+        p_title: `👑 Has encontrado tu Rey número ${kings}.`,
+        p_body: "Hito de Rey desbloqueado.",
+        p_href: `/app/games/${sessionId}`,
+        p_payload: { session_id: sessionId, kings },
+      });
+    }
+  }
+}
+
 export async function playDueloAction(sessionId: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("play_duelo_round", { p_session_id: sessionId });
   if (error) redirect(`/app/games/${sessionId}?error=${encodeURIComponent(error.message)}`);
+  await notifyGameMilestone(sessionId);
   redirect(`/app/games/${sessionId}`);
 }
 
@@ -410,6 +464,7 @@ export async function drawReyAction(sessionId: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("draw_rey_card", { p_session_id: sessionId });
   if (error) redirect(`/app/games/${sessionId}?error=${encodeURIComponent(error.message)}`);
+  await notifyGameMilestone(sessionId);
   redirect(`/app/games/${sessionId}`);
 }
 
@@ -417,7 +472,28 @@ export async function playPeajeAction(sessionId: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("play_peaje_spin", { p_session_id: sessionId });
   if (error) redirect(`/app/games/${sessionId}?error=${encodeURIComponent(error.message)}`);
+  await notifyGameMilestone(sessionId);
   redirect(`/app/games/${sessionId}`);
+}
+
+export async function settleBetMarketAction(formData: FormData): Promise<void> {
+  const marketId = String(formData.get("market_id") ?? "");
+  const selectionId = String(formData.get("winning_selection_id") ?? "");
+  const leagueId = String(formData.get("league_id") ?? "");
+  if (!marketId || !selectionId) {
+    redirect(`/app/bets?error=${encodeURIComponent("Elige la selección ganadora.")}`);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("settle_bet_market", {
+    p_market_id: marketId,
+    p_winning_selection_id: selectionId,
+  });
+  if (error) {
+    redirect(
+      `/app/bets?league=${leagueId}&error=${encodeURIComponent(friendlyLeagueError(error.message) || error.message)}`,
+    );
+  }
+  redirect(`/app/bets?league=${leagueId}&settled=1`);
 }
 
 export async function sendFriendRequestAction(formData: FormData): Promise<ActionResult> {

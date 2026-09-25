@@ -8,13 +8,15 @@ const TOGGLES: Array<{ key: string; label: string }> = [
   { key: "ranking", label: "Clasificaciones" },
   { key: "achievement", label: "Logros" },
   { key: "chemistry", label: "Química" },
+  { key: "mvp", label: "MVP" },
   { key: "bets", label: "Apuestas" },
   { key: "boost", label: "SuperAumentos" },
-  { key: "mvp", label: "MVP" },
   { key: "games", label: "Juegos" },
-  { key: "events", label: "Eventos" },
+  { key: "events", label: "Eventos especiales" },
   { key: "birthday", label: "Cumpleaños" },
   { key: "challenges", label: "Retos" },
+  { key: "seasons", label: "Temporadas" },
+  { key: "records", label: "Récords" },
   { key: "weekly", label: "Resúmenes semanales" },
   { key: "push_enabled", label: "Push en este perfil" },
 ];
@@ -46,8 +48,14 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
     >
       <h2 className="font-display text-xl">Preferencias</h2>
       <p className="text-xs text-[var(--muted)]">
-        Solo eventos reales. Sin mensajes vacíos para abrir la app.
+        Solo eventos reales de DrinkLeague. Sin mensajes vacíos ni límites artificiales.
       </p>
+      {prefs?.persona ? (
+        <p className="rounded-xl border border-[var(--line)] px-3 py-2 text-xs text-[var(--muted)]">
+          Perfil inteligente: <span className="font-semibold text-[var(--ink)]">{String(prefs.persona)}</span>
+          {" · "}más avisos de lo que más usas.
+        </p>
+      ) : null}
       <ul className="space-y-2">
         {TOGGLES.map((t) => (
           <li key={t.key} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-3 py-2.5">
