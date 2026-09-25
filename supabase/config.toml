@@ -1,0 +1,16 @@
+# Supabase local/CLI project config (optional).
+# Migrations in ./migrations can also be pasted into the SQL Editor.
+
+[project]
+id = "drinkleague"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/**"]

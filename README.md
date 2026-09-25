@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DrinkLeague
 
-## Getting Started
+PWA de ligas privadas: registra bebidas, suma puntos y compite por semana, mes y temporada.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + TypeScript + Tailwind
+- **Supabase** (Auth + PostgreSQL + RLS + RPC)
+
+## Arranque rápido
+
+### 1. Variables de entorno
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Rellena con la URL y la anon key de tu proyecto Supabase.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Base de datos
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+En el **SQL Editor** de Supabase, ejecuta en orden los ficheros de `supabase/migrations/`:
 
-## Learn More
+1. `20260325000001_initial_schema.sql`
+2. `20260325000002_functions.sql`
+3. `20260325000003_seeds.sql`
+4. `20260325000004_rpc_leagues.sql`
+5. `20260325000005_rpc_log_drinks.sql`
+6. `20260325000006_rls.sql`
 
-To learn more about Next.js, take a look at the following resources:
+Opcional: Auth → Providers → Email enabled. Desactiva “Confirm email” en desarrollo si quieres entrar al instante.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. App
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+Abre [http://localhost:3000](http://localhost:3000).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Visión / Spec vigente
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Spec completa v4:** [`docs/PRODUCT_SPEC_v4.md`](docs/PRODUCT_SPEC_v4.md)  
+  (registro global, DrinkBets, tienda/fichas, juegos, calendario, economía)  
+- Visión intermedia: `docs/PRODUCT_VISION_v3.md` (histórico)
+
+## Rutas app (v5)
+
+| Ruta | Qué hace |
+|---|---|
+| `/app` | Quick Log global + lugares inteligentes + digests IA |
+| `/app/shop` | Tienda global de cosméticos |
+| `/app/bets` | DrinkBets + SuperAumentos |
+| `/app/games` | Peaje / Rey / Duelo + Fiesta |
+| `/app/calendar` | Eventos, cumpleaños +300, actividad 5/7 |
+| `/app/social` | Amigos, química 0–100, feed, parejas legendarias |
+| `/app/battle-pass` | Pase 100 niveles reclamable |
+| `/app/records` | Libro de récords, MVPs, noches históricas |
+| `/app/wrapped` | DrinkWrapped anual |
+| `/app/profile` | Perfil videojuego: títulos, vitrina, personalidades |
+| `/app/admin` | Superadmin total + auditoría |
+| `/app/leagues` · `/challenges` · `/wars` | Ligas, retos, guerras |
+
+## Spec
+
+- Vigente: [`docs/PRODUCT_SPEC_v4.md`](docs/PRODUCT_SPEC_v4.md) (+ ampliación v5 en producto: títulos, vitrina, wrapped, IA, admin audit)
+
+En Supabase → **Authentication → Providers → Email**:
+
+1. Enable Email = ON  
+2. **Confirm email = OFF** (sin verificación)  
+3. Site URL = `http://localhost:3000`
+
+Superadmin: `angel.nuunoo@gmail.com` (también se reconoce `angelnuunoo@gmail.com`).

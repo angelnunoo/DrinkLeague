@@ -1,0 +1,2 @@
+-- Applied remotely: platform_v3_social_foundation
+-- Friend codes, friendships, chemistry, challenges/wars/battle-pass stubs, superadmin allowlist
