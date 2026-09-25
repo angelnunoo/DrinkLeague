@@ -1,0 +1,17 @@
+# DrinkLeague on Netlify (Next.js App Router)
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Ensure public env vars are available at build + runtime (set real values in Netlify UI)
+  # NEXT_PUBLIC_SUPABASE_URL=
+  # NEXT_PUBLIC_SUPABASE_ANON_KEY=
+  # NEXT_PUBLIC_APP_URL=https://YOUR-SITE.netlify.app
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Help browsers send cookies on same-site navigations
+    Referrer-Policy = "strict-origin-when-cross-origin"

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookieOptions } from "@/lib/supabase/cookie-options";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -9,6 +10,8 @@ export async function updateSession(request: NextRequest) {
   if (!url || !key || url.includes("YOUR_PROJECT")) {
     return supabaseResponse;
   }
+
+  const https = request.nextUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -21,19 +24,12 @@ export async function updateSession(request: NextRequest) {
         });
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) => {
-          // Long-lived cookies for PWA "remember me" / stay signed in
-          supabaseResponse.cookies.set(name, value, {
-            ...options,
-            maxAge: options?.maxAge ?? 60 * 60 * 24 * 365,
-            sameSite: "lax",
-            path: "/",
-          });
+          supabaseResponse.cookies.set(name, value, authCookieOptions(options, { https }));
         });
       },
     },
   });
 
-  // Refresh session if needed (keeps PWA logged in)
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -53,7 +49,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Logged-in users on auth pages → app (avoid bounce loops with missing profile)
   if (user && (path === "/login" || path === "/register" || path === "/forgot-password")) {
     const next = request.nextUrl.searchParams.get("next");
     const redirectUrl = request.nextUrl.clone();
@@ -62,5 +57,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  void isPublic;
   return supabaseResponse;
 }

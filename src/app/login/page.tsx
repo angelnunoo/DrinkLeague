@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState, useTransition } from "react";
 import { BrandMark } from "@/components/brand";
-import { SubmitButton } from "@/components/auth-form";
-import { signIn } from "@/app/actions";
 
 function LoginForm() {
   const search = useSearchParams();
@@ -14,19 +12,35 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(
     authError ? "No se pudo completar el acceso. Inténtalo de nuevo." : null,
   );
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
 
   return (
     <form
       className="flex flex-col gap-4"
-      action={(fd) => {
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
         setError(null);
         startTransition(async () => {
           try {
-            const result = await signIn(fd);
-            if (result?.error) setError(result.error);
+            const res = await fetch("/api/auth/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({
+                login: String(fd.get("login") ?? ""),
+                password: String(fd.get("password") ?? ""),
+                next: String(fd.get("next") ?? next),
+              }),
+            });
+            const data = (await res.json()) as { error?: string; next?: string };
+            if (!res.ok || data.error) {
+              setError(data.error || "No se pudo entrar.");
+              return;
+            }
+            window.location.assign(data.next?.startsWith("/") ? data.next : "/app");
           } catch {
-            /* redirect */
+            setError("Error de red. Inténtalo de nuevo.");
           }
         });
       }}
@@ -57,7 +71,9 @@ function LoginForm() {
         Mantener sesión iniciada
       </label>
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
-      <SubmitButton className="w-full">Entrar</SubmitButton>
+      <button type="submit" disabled={pending} className="btn-primary w-full">
+        {pending ? "Espera…" : "Entrar"}
+      </button>
     </form>
   );
 }

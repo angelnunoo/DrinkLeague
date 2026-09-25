@@ -105,8 +105,12 @@ export async function requestPasswordReset(formData: FormData): Promise<ActionRe
   }
 
   const supabase = await createClient();
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  const { appOriginFromHeaders } = await import("@/lib/supabase/cookie-options");
+  const origin = appOriginFromHeaders(h);
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/callback?next=/app/profile`,
+    redirectTo: `${origin}/auth/callback?next=/app/profile`,
   });
 
   if (error) return { error: friendlyAuthError(error.message) };

@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { BrandMark } from "@/components/brand";
-import { SubmitButton } from "@/components/auth-form";
-import { signUp } from "@/app/actions";
 
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12">
@@ -21,16 +19,40 @@ export default function RegisterPage() {
       <div className="surface mt-8 p-6">
         <form
           className="flex flex-col gap-4"
-          action={(fd) => {
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
             setError(null);
             setInfo(null);
             startTransition(async () => {
               try {
-                const result = await signUp(fd);
-                if (result?.error) setError(result.error);
-                else if (result?.message) setInfo(result.message);
+                const res = await fetch("/api/auth/register", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "same-origin",
+                  body: JSON.stringify({
+                    login: String(fd.get("login") ?? ""),
+                    password: String(fd.get("password") ?? ""),
+                    display_name: String(fd.get("display_name") ?? ""),
+                  }),
+                });
+                const data = (await res.json()) as {
+                  error?: string;
+                  message?: string;
+                  needsLogin?: boolean;
+                  next?: string;
+                };
+                if (!res.ok || data.error) {
+                  setError(data.error || "No se pudo crear la cuenta.");
+                  return;
+                }
+                if (data.needsLogin) {
+                  setInfo(data.message || "Cuenta creada. Ya puedes entrar.");
+                  return;
+                }
+                window.location.assign(data.next?.startsWith("/") ? data.next : "/app");
               } catch {
-                /* redirect */
+                setError("Error de red. Inténtalo de nuevo.");
               }
             });
           }}
@@ -67,7 +89,9 @@ export default function RegisterPage() {
           </label>
           {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
           {info ? <p className="text-sm text-[var(--teal)]">{info}</p> : null}
-          <SubmitButton className="w-full">Registrarme</SubmitButton>
+          <button type="submit" disabled={pending} className="btn-primary w-full">
+            {pending ? "Espera…" : "Registrarme"}
+          </button>
         </form>
       </div>
       <p className="mt-6 text-center text-sm text-[var(--muted)]">
