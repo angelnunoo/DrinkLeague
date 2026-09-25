@@ -7,6 +7,10 @@ import { VisualLeaderboard } from "@/components/ui/visual-leaderboard";
 import { RivalCard } from "@/components/ui/rival-card";
 import { refreshPredictionsAction, leaveLeagueAction, kickLeagueMemberAction } from "@/app/actions";
 import { isSuperadminRole } from "@/lib/errors";
+import { LeagueInviteShare } from "@/components/league-invite-share";
+import { formatInviteLink } from "@/lib/domain";
+import { headers } from "next/headers";
+import { appOriginFromHeaders } from "@/lib/supabase/cookie-options";
 
 type Period = "weekly" | "monthly" | "season";
 
@@ -22,6 +26,8 @@ export default async function LeaguePage({
     pred?: string;
     kicked?: string;
     error?: string;
+    invite?: string;
+    code?: string;
   }>;
 }) {
   const { id } = await params;
@@ -31,6 +37,8 @@ export default async function LeaguePage({
   if (!profile) redirect("/login");
 
   const supabase = await createClient();
+  const hdrs = await headers();
+  const origin = appOriginFromHeaders(hdrs);
 
   // Refresh rivalries + ranks + predictions (best effort)
   await Promise.all([
@@ -53,12 +61,21 @@ export default async function LeaguePage({
   const isSuper = isSuperadminRole(profile.role);
   const isCaptain = myMembership?.role === "league_admin" || isSuper;
 
-  const { data: invite } = await supabase
-    .from("league_invites")
-    .select("code")
-    .eq("league_id", id)
-    .eq("is_active", true)
-    .maybeSingle();
+  // Ensure invite code exists for members to share
+  let inviteCode = sp.code?.trim() || null;
+  if (!inviteCode) {
+    const { data: ensured } = await supabase.rpc("ensure_league_invite", { p_league_id: id });
+    inviteCode = ensured ? String(ensured) : null;
+  }
+  if (!inviteCode) {
+    const { data: invite } = await supabase
+      .from("league_invites")
+      .select("code")
+      .eq("league_id", id)
+      .eq("is_active", true)
+      .maybeSingle();
+    inviteCode = invite?.code ?? null;
+  }
 
   const { data: members } = await supabase
     .from("league_memberships")
@@ -154,13 +171,8 @@ export default async function LeaguePage({
           ← Ligas
         </Link>
         <h1 className="mt-2 font-display text-3xl">{league.name}</h1>
-        {invite?.code ? (
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Código:{" "}
-            <span className="font-semibold tracking-widest text-[var(--ink-strong)]">
-              {invite.code}
-            </span>
-          </p>
+        {sp.invite ? (
+          <p className="mt-2 text-sm text-[var(--teal)]">Enlace de invitación regenerado.</p>
         ) : null}
         {sp.pred ? (
           <p className="mt-2 text-sm text-[var(--teal)]">Predicciones IA actualizadas.</p>
@@ -172,6 +184,16 @@ export default async function LeaguePage({
           <p className="mt-2 text-sm text-[var(--danger)]">{sp.error}</p>
         ) : null}
       </div>
+
+      {inviteCode && (myMembership || isSuper) ? (
+        <LeagueInviteShare
+          leagueName={league.name}
+          code={inviteCode}
+          inviteUrl={formatInviteLink(inviteCode, origin)}
+          canRotate={isCaptain}
+          leagueId={id}
+        />
+      ) : null}
 
       <Link href="/app#registrar" className="mega-cta">
         🍺 Registrar bebida

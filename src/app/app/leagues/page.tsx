@@ -16,9 +16,14 @@ export default async function LeaguesIndexPage({
           <h1 className="font-display text-3xl">Ligas</h1>
           <p className="mt-1 text-[var(--muted)]">Tus campos de batalla.</p>
         </div>
-        <Link href="/app/leagues/new" className="btn-primary text-sm">
-          Crear
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/app/join" className="btn-ghost text-sm">
+            Unirme
+          </Link>
+          <Link href="/app/leagues/new" className="btn-primary text-sm">
+            Crear
+          </Link>
+        </div>
       </div>
 
       {sp.left ? (
@@ -35,6 +40,9 @@ export default async function LeaguesIndexPage({
       {leagues.length === 0 ? (
         <div className="surface mt-8 p-8 text-center">
           <p className="font-display text-2xl">Sin ligas todavía</p>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Crea una y comparte el enlace por WhatsApp, o únete con un código.
+          </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/app/leagues/new" className="btn-primary">
               Crear liga
@@ -56,7 +64,7 @@ export default async function LeaguesIndexPage({
                   <p className="font-display text-xl">{league.name}</p>
                   <p className="text-sm text-[var(--muted)]">
                     {league.membership_role === "league_admin" ? "Capitán · " : ""}
-                    {league.timezone}
+                    Invita desde la liga · {league.timezone}
                   </p>
                 </div>
                 <span className="text-[var(--amber)]">→</span>

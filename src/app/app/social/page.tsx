@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentProfile } from "@/lib/data";
+import { headers } from "next/headers";
+import { getCurrentProfile, getMyLeagues } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { FriendActions } from "@/components/friend-actions";
+import { LeagueInviteShare } from "@/components/league-invite-share";
+import { formatInviteLink } from "@/lib/domain";
+import { appOriginFromHeaders } from "@/lib/supabase/cookie-options";
 
 function chemTier(score: number): string {
   if (score >= 95) return "Leyendas Inseparables";
@@ -18,6 +22,20 @@ export default async function SocialPage() {
   if (!profile) redirect("/login");
 
   const supabase = await createClient();
+  const origin = appOriginFromHeaders(await headers());
+  const myLeagues = await getMyLeagues();
+
+  const leagueInvites = await Promise.all(
+    myLeagues.slice(0, 4).map(async (league) => {
+      const { data: code } = await supabase.rpc("ensure_league_invite", {
+        p_league_id: league.id,
+      });
+      return {
+        league,
+        code: code ? String(code) : null,
+      };
+    }),
+  );
 
   const [{ data: incoming }, { data: friendships }, { data: feed }, { data: pairs }] =
     await Promise.all([
@@ -59,7 +77,50 @@ export default async function SocialPage() {
     <section className="animate-rise space-y-6">
       <div>
         <h1 className="font-display text-3xl">Social</h1>
-        <p className="mt-1 text-[var(--muted)]">Amigos, química 0–100, feed y parejas legendarias.</p>
+        <p className="mt-1 text-[var(--muted)]">
+          Invita a tu liga por WhatsApp, amigos y química.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Ligas</p>
+            <h2 className="font-display text-xl">Invitar por enlace</h2>
+          </div>
+          <Link href="/app/join" className="btn-ghost text-xs">
+            Unirme con código
+          </Link>
+        </div>
+        {!leagueInvites.length ? (
+          <div className="surface p-5 text-sm text-[var(--muted)]">
+            Aún no tienes ligas.{" "}
+            <Link href="/app/leagues/new" className="font-semibold text-[var(--ink-strong)] underline-offset-2 hover:underline">
+              Crea una
+            </Link>{" "}
+            y comparte el enlace.
+          </div>
+        ) : (
+          leagueInvites.map(({ league, code }) =>
+            code ? (
+              <LeagueInviteShare
+                key={league.id}
+                leagueName={league.name}
+                code={code}
+                inviteUrl={formatInviteLink(code, origin)}
+                canRotate={league.membership_role === "league_admin"}
+                leagueId={league.id}
+              />
+            ) : (
+              <div key={league.id} className="surface p-4 text-sm text-[var(--muted)]">
+                {league.name}: sin invitación activa.{" "}
+                <Link href={`/app/leagues/${league.id}`} className="underline-offset-2 hover:underline">
+                  Abrir liga
+                </Link>
+              </div>
+            ),
+          )
+        )}
       </div>
 
       <div className="surface p-5">
@@ -77,7 +138,7 @@ export default async function SocialPage() {
           <p className="mt-3 text-sm text-[var(--muted)]">No hay solicitudes pendientes.</p>
         ) : (
           <ul className="mt-3 space-y-3">
-            {incoming.map((req) => {
+            {(incoming ?? []).map((req) => {
               const from = req.users as unknown as {
                 display_name: string;
                 friend_code: string;
@@ -108,7 +169,7 @@ export default async function SocialPage() {
           <p className="mt-3 text-sm text-[var(--muted)]">Aún no tienes amigos.</p>
         ) : (
           <ul className="mt-3 space-y-3">
-            {friendships.map((f) => {
+            {(friendships ?? []).map((f) => {
               const otherId = f.user_a === profile.id ? f.user_b : f.user_a;
               const u = peopleMap.get(otherId);
               const score = Number(f.chemistry_score ?? f.chemistry_xp ?? 0);

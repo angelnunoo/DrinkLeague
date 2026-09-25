@@ -161,6 +161,13 @@ export async function joinByCodeAction(formData: FormData): Promise<ActionResult
   redirect(`/app/leagues/${data}`);
 }
 
+export async function rotateLeagueInviteAction(leagueId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("rotate_league_invite", { p_league_id: leagueId });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  redirect(`/app/leagues/${leagueId}?invite=1&code=${encodeURIComponent(String(data ?? ""))}`);
+}
+
 export async function leaveLeagueAction(leagueId: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("leave_league", { p_league_id: leagueId });

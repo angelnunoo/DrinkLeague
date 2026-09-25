@@ -28,11 +28,14 @@ export function authCookieOptions(
 }
 
 export function appOriginFromHeaders(headers: Headers): string {
-  const env = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  if (env && !env.includes("localhost")) return env;
-
-  const proto = headers.get("x-forwarded-proto") ?? "https";
-  const host = headers.get("x-forwarded-host") ?? headers.get("host");
+  const protoRaw = headers.get("x-forwarded-proto") ?? headers.get("x-forwarded-protocol");
+  const hostRaw = headers.get("x-forwarded-host") ?? headers.get("host");
+  const proto = (protoRaw ?? (process.env.NODE_ENV === "production" ? "https" : "http"))
+    .split(",")[0]
+    .trim();
+  const host = hostRaw?.split(",")[0]?.trim();
   if (host) return `${proto}://${host}`;
-  return env ?? "http://localhost:3000";
+
+  const env = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  return env || "http://localhost:3000";
 }
