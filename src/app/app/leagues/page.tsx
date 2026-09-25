@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { getMyLeagues } from "@/lib/data";
 
-export default async function LeaguesIndexPage() {
+export default async function LeaguesIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ left?: string; error?: string }>;
+}) {
   const leagues = await getMyLeagues();
+  const sp = await searchParams;
 
   return (
     <section className="animate-rise">
@@ -15,6 +20,17 @@ export default async function LeaguesIndexPage() {
           Crear
         </Link>
       </div>
+
+      {sp.left ? (
+        <p className="mt-4 rounded-xl bg-[color-mix(in_srgb,var(--teal)_15%,transparent)] px-3 py-2 text-sm text-[var(--teal)]">
+          Has abandonado la liga.
+        </p>
+      ) : null}
+      {sp.error ? (
+        <p className="mt-4 rounded-xl bg-[color-mix(in_srgb,var(--danger)_15%,transparent)] px-3 py-2 text-sm text-[var(--danger)]">
+          {sp.error}
+        </p>
+      ) : null}
 
       {leagues.length === 0 ? (
         <div className="surface mt-8 p-8 text-center">

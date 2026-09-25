@@ -5,7 +5,8 @@ import { getCurrentProfile } from "@/lib/data";
 import type { ActivityEvent } from "@/lib/types";
 import { VisualLeaderboard } from "@/components/ui/visual-leaderboard";
 import { RivalCard } from "@/components/ui/rival-card";
-import { refreshPredictionsAction } from "@/app/actions";
+import { refreshPredictionsAction, leaveLeagueAction, kickLeagueMemberAction } from "@/app/actions";
+import { isSuperadminRole } from "@/lib/errors";
 
 type Period = "weekly" | "monthly" | "season";
 
@@ -14,7 +15,14 @@ export default async function LeaguePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; logged?: string; created?: string; pred?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    logged?: string;
+    created?: string;
+    pred?: string;
+    kicked?: string;
+    error?: string;
+  }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -34,12 +42,30 @@ export default async function LeaguePage({
   const { data: league } = await supabase.from("leagues").select("*").eq("id", id).maybeSingle();
   if (!league) notFound();
 
+  const { data: myMembership } = await supabase
+    .from("league_memberships")
+    .select("role, status")
+    .eq("league_id", id)
+    .eq("user_id", profile.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  const isSuper = isSuperadminRole(profile.role);
+  const isCaptain = myMembership?.role === "league_admin" || isSuper;
+
   const { data: invite } = await supabase
     .from("league_invites")
     .select("code")
     .eq("league_id", id)
     .eq("is_active", true)
     .maybeSingle();
+
+  const { data: members } = await supabase
+    .from("league_memberships")
+    .select("user_id, role, joined_at, users(display_name, email)")
+    .eq("league_id", id)
+    .eq("status", "active")
+    .order("joined_at", { ascending: true });
 
   const leaderboard = await fetchLeaderboard(supabase, id, tab);
 
@@ -119,6 +145,8 @@ export default async function LeaguePage({
     prev_rank: prevMap.get(r.user_id) ?? null,
   }));
 
+  void week;
+
   return (
     <section className="animate-rise space-y-6">
       <div>
@@ -136,6 +164,12 @@ export default async function LeaguePage({
         ) : null}
         {sp.pred ? (
           <p className="mt-2 text-sm text-[var(--teal)]">Predicciones IA actualizadas.</p>
+        ) : null}
+        {sp.kicked ? (
+          <p className="mt-2 text-sm text-[var(--teal)]">Miembro expulsado.</p>
+        ) : null}
+        {sp.error ? (
+          <p className="mt-2 text-sm text-[var(--danger)]">{sp.error}</p>
         ) : null}
       </div>
 
@@ -183,6 +217,62 @@ export default async function LeaguePage({
       </div>
 
       <VisualLeaderboard meId={profile.id} rows={visualRows} />
+
+      {/* Members */}
+      <div className="surface space-y-3 p-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Plantilla</p>
+          <h2 className="font-display text-xl">Miembros</h2>
+        </div>
+        <ul className="space-y-2">
+          {(members ?? []).map((m) => {
+            const u = m.users as unknown as { display_name: string; email: string } | null;
+            const canKick =
+              m.user_id !== profile.id &&
+              (isSuper || (isCaptain && m.role !== "league_admin"));
+            return (
+              <li
+                key={m.user_id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{u?.display_name ?? "Jugador"}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                    {m.role === "league_admin" ? "Capitán" : "Miembro"}
+                    {isSuper && u?.email ? ` · ${u.email}` : ""}
+                  </p>
+                </div>
+                {canKick ? (
+                  <form action={kickLeagueMemberAction}>
+                    <input type="hidden" name="league_id" value={id} />
+                    <input type="hidden" name="user_id" value={m.user_id} />
+                    <button
+                      type="submit"
+                      className="rounded-full border border-[var(--danger)] px-3 py-1 text-[10px] font-bold text-[var(--danger)]"
+                    >
+                      Expulsar
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            );
+          })}
+          {!members?.length ? (
+            <li className="text-sm text-[var(--muted)]">Sin miembros activos.</li>
+          ) : null}
+        </ul>
+
+        {myMembership ? (
+          <form action={leaveLeagueAction.bind(null, id)} className="pt-2">
+            <button
+              type="submit"
+              className="w-full rounded-xl border border-[var(--danger)] px-4 py-3 text-sm font-semibold text-[var(--danger)]"
+            >
+              Abandonar liga
+            </button>
+          </form>
+        ) : null}
+      </div>
 
       {/* AI Predictions */}
       <div className="surface p-4">

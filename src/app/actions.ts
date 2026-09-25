@@ -157,6 +157,32 @@ export async function joinByCodeAction(formData: FormData): Promise<ActionResult
   redirect(`/app/leagues/${data}`);
 }
 
+export async function leaveLeagueAction(leagueId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("leave_league", { p_league_id: leagueId });
+  if (error) redirect(`/app/leagues/${leagueId}?error=${encodeURIComponent(friendlyLeagueError(error.message) || error.message)}`);
+  redirect("/app/leagues?left=1");
+}
+
+export async function kickLeagueMemberAction(formData: FormData): Promise<void> {
+  const leagueId = String(formData.get("league_id") ?? "");
+  const userId = String(formData.get("user_id") ?? "");
+  if (!leagueId || !userId) {
+    redirect(`/app/leagues?error=${encodeURIComponent("Datos incompletos.")}`);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("kick_league_member", {
+    p_league_id: leagueId,
+    p_user_id: userId,
+  });
+  if (error) {
+    redirect(
+      `/app/leagues/${leagueId}?error=${encodeURIComponent(friendlyLeagueError(error.message) || error.message)}`,
+    );
+  }
+  redirect(`/app/leagues/${leagueId}?kicked=1`);
+}
+
 export async function joinByTokenAction(token: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("join_league_by_token", {
