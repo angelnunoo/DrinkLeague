@@ -1,17 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { authCookieOptions } from "@/lib/supabase/cookie-options";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { friendlyAuthError } from "@/lib/errors";
 
 type Body = { login?: string; password?: string; display_name?: string };
 
 /** Register + auto sign-in with cookies on the response (Netlify-safe). */
 export async function POST(request: Request) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key || url.includes("YOUR_PROJECT")) {
+  const cfg = getSupabasePublicConfig();
+  if (!cfg) {
     return NextResponse.json(
-      { error: "Faltan variables NEXT_PUBLIC_SUPABASE_URL / ANON_KEY en Netlify." },
+      { error: "Supabase no configurado en este entorno." },
       { status: 500 },
     );
   }
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   const cookieJar: Array<{ name: string; value: string; options: Parameters<typeof authCookieOptions>[0] }> =
     [];
 
-  const supabase = createServerClient(url, key, {
+  const supabase = createServerClient(cfg.url, cfg.anonKey, {
     cookies: {
       getAll() {
         const header = request.headers.get("cookie") ?? "";

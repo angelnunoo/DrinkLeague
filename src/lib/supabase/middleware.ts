@@ -1,19 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { authCookieOptions } from "@/lib/supabase/cookie-options";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key || url.includes("YOUR_PROJECT")) {
+  const cfg = getSupabasePublicConfig();
+  if (!cfg) {
     return supabaseResponse;
   }
 
-  const https = request.nextUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
+  const https =
+    request.nextUrl.protocol === "https:" ||
+    request.headers.get("x-forwarded-proto") === "https";
 
-  const supabase = createServerClient(url, key, {
+  const supabase = createServerClient(cfg.url, cfg.anonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -40,7 +42,6 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/register") ||
     path.startsWith("/forgot-password") ||
     path.startsWith("/auth");
-  const isPublic = path === "/" || isAuthRoute || path.startsWith("/join");
 
   if (!user && path.startsWith("/app")) {
     const redirectUrl = request.nextUrl.clone();
@@ -57,6 +58,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  void isPublic;
+  void isAuthRoute;
   return supabaseResponse;
 }

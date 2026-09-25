@@ -5,13 +5,14 @@
 
 [build.environment]
   NODE_VERSION = "22"
-  # Ensure public env vars are available at build + runtime (set real values in Netlify UI)
-  # NEXT_PUBLIC_SUPABASE_URL=
-  # NEXT_PUBLIC_SUPABASE_ANON_KEY=
-  # NEXT_PUBLIC_APP_URL=https://YOUR-SITE.netlify.app
+  # Public client keys (safe to expose — same as browser bundle)
+  NEXT_PUBLIC_SUPABASE_URL = "https://vujmastqxbhmqwwazbdu.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1am1hc3RxeGJobXF3d2F6YmR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMjAwMzAsImV4cCI6MjEwNTg5NjAzMH0.iuryGViwzWy8RYUagOIk0-_R8-e6XlWVfbPIFF7Axk8"
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY = "BKg1x510hGD3c--X_LNmYFOxue1JjyFs5LiF4tYvp1SWA5wgUbaAzpc5A8JncHXESbfcuxYqNxRwCph6sQtEciE"
+  # Overridden at runtime via x-forwarded-host when possible; set your real URL in Netlify UI if needed
+  NEXT_PUBLIC_APP_URL = "https://drinkleague.netlify.app"
 
 [[headers]]
   for = "/*"
   [headers.values]
-    # Help browsers send cookies on same-site navigations
     Referrer-Policy = "strict-origin-when-cross-origin"
