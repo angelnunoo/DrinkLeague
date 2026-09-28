@@ -270,6 +270,9 @@ export function LogDrinksForm({ mega = false }: { mega?: boolean }) {
             </ul>
             <p className="font-display text-4xl text-[var(--amber)]">+{confirm.points} puntos</p>
             <p className="text-sm text-[var(--muted)]">📍 {confirm.venue}</p>
+            <p className="text-xs text-[var(--muted)]">
+              Sumado en todas tus ligas activas · hora España (Madrid)
+            </p>
             <div className="flex flex-col gap-2 pt-2">
               <button type="button" className="btn-primary min-h-12 w-full" onClick={() => setConfirm(null)}>
                 Seguir registrando

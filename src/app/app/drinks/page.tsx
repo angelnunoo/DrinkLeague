@@ -23,17 +23,20 @@ type MyDrinkLog = {
   items: DrinkItem[] | null;
 };
 
-function formatWhen(iso: string) {
+function formatWhenMadrid(iso: string) {
   const when = new Date(iso);
   const day = when.toLocaleDateString("es-ES", {
+    timeZone: "Europe/Madrid",
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
   const time = when.toLocaleTimeString("es-ES", {
+    timeZone: "Europe/Madrid",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
   return { day, time };
 }
@@ -94,7 +97,7 @@ export default async function MyDrinksPage({
       <div>
         <h1 className="font-display text-3xl">🍺 Mis consumiciones</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Lugar, día y hora de cada registro. Puedes eliminar si te equivocaste.
+          Lugar, día y hora (España · Madrid). Cada registro suma en todas tus ligas.
         </p>
       </div>
 
@@ -112,7 +115,7 @@ export default async function MyDrinksPage({
 
       <ul className="space-y-4">
         {logs.map((log) => {
-          const { day, time } = formatWhen(log.consumed_at);
+          const { day, time } = formatWhenMadrid(log.consumed_at);
           const items = Array.isArray(log.items) ? log.items : [];
           return (
             <li key={log.id} className="surface space-y-4 p-5">
