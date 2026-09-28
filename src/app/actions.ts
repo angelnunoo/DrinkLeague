@@ -1288,14 +1288,12 @@ export async function spinSocialRouletteAction(): Promise<ActionResult> {
 }
 
 export async function spinCasinoRouletteAction(
-  stake: number,
-  bet: string,
+  bets: Array<{ spot: string; amount: number }>,
 ): Promise<ActionResult> {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc("spin_casino_roulette", {
-      p_stake: stake,
-      p_bet: bet,
+    const { data, error } = await supabase.rpc("spin_casino_roulette_bets", {
+      p_bets: bets,
     });
     if (error) return { error: friendlyLeagueError(error.message) || error.message };
     return { success: true, payload: data as Record<string, unknown> };

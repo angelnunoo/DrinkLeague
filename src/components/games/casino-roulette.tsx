@@ -4,40 +4,42 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { spinCasinoRouletteAction } from "@/app/actions";
 
-/** Standard European wheel order (clockwise). */
 const WHEEL_ORDER = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24,
   16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
 ] as const;
 
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
-const STAKES = [50, 100, 250, 500, 1000] as const;
 const SEG = 360 / WHEEL_ORDER.length;
 
-type OutsideBet = "red" | "black" | "even" | "odd" | "low" | "high";
-type BetKind = OutsideBet | "number";
+const CHIPS = [
+  { value: 10, tone: "white", label: "10" },
+  { value: 50, tone: "blue", label: "50" },
+  { value: 100, tone: "green", label: "100" },
+  { value: 500, tone: "red", label: "500" },
+  { value: 1000, tone: "black", label: "1K" },
+] as const;
+
+type ChipValue = (typeof CHIPS)[number]["value"];
+type SpotChips = Record<string, ChipValue[]>;
 
 type SpinPayload = {
   number?: number;
   color?: string;
-  bet?: string;
-  bet_number?: number | null;
   stake?: number;
   payout?: number;
   tokens?: number;
   result?: string;
   xp?: number;
-  mult?: number;
+  bets?: Array<{ spot: string; amount: number; won: boolean; payout: number }>;
 };
 
 type RuletaStats = {
   played?: number;
   won?: number;
   lost?: number;
-  best_streak?: number;
   tokens_won?: number;
   tokens_lost?: number;
-  biggest_win?: number;
   favorite_number?: number | null;
 };
 
@@ -56,7 +58,7 @@ function vibrate(pattern: number | number[] = 40) {
   }
 }
 
-function playCasinoTick(freq = 420) {
+function playChipSound() {
   try {
     const AC =
       window.AudioContext ||
@@ -65,31 +67,45 @@ function playCasinoTick(freq = 420) {
     const ctx = new AC();
     const o = ctx.createOscillator();
     const g = ctx.createGain();
-    o.type = "square";
-    o.frequency.value = freq;
-    g.gain.value = 0.03;
+    o.type = "triangle";
+    o.frequency.value = 340;
+    g.gain.value = 0.04;
     o.connect(g);
     g.connect(ctx.destination);
     o.start();
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-    o.stop(ctx.currentTime + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+    o.stop(ctx.currentTime + 0.07);
     window.setTimeout(() => ctx.close(), 100);
   } catch {
     /* optional */
   }
 }
 
-function betLabel(kind: BetKind, num: number | null): string {
-  if (kind === "number") return `🎯 ${num ?? 0}`;
-  const map: Record<OutsideBet, string> = {
-    red: "🔴 Rojo",
-    black: "⚫ Negro",
-    even: "⚪ Par",
-    odd: "⚪ Impar",
-    low: "⬇️ 1-18",
-    high: "⬆️ 19-36",
-  };
-  return map[kind];
+function sumChips(chips: ChipValue[]) {
+  return chips.reduce((a, c) => a + c, 0);
+}
+
+function ChipStack({ chips, flying }: { chips: ChipValue[]; flying?: boolean }) {
+  const top = chips.slice(-4);
+  if (!top.length) return null;
+  const total = sumChips(chips);
+  return (
+    <div className={`chip-stack ${flying ? "chip-stack-fly" : ""}`}>
+      {top.map((v, i) => {
+        const tone = CHIPS.find((c) => c.value === v)?.tone ?? "white";
+        return (
+          <span
+            key={`${v}-${i}`}
+            className={`casino-chip chip-${tone} chip-mini`}
+            style={{ transform: `translateY(${-i * 4}px)` }}
+          >
+            {v >= 1000 ? "1K" : v}
+          </span>
+        );
+      })}
+      <span className="chip-stack-total">{total}</span>
+    </div>
+  );
 }
 
 export function CasinoRoulette({
@@ -101,42 +117,71 @@ export function CasinoRoulette({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [stake, setStake] = useState(100);
-  const [customStake, setCustomStake] = useState("");
-  const [betKind, setBetKind] = useState<BetKind>("red");
-  const [pickNumber, setPickNumber] = useState<number | null>(null);
-  const [showNumbers, setShowNumbers] = useState(false);
+  const [selectedChip, setSelectedChip] = useState<ChipValue>(100);
+  const [spots, setSpots] = useState<SpotChips>({});
   const [spinning, setSpinning] = useState(false);
   const [wheelRot, setWheelRot] = useState(0);
   const [ballRot, setBallRot] = useState(0);
   const [result, setResult] = useState<SpinPayload | null>(null);
+  const [phase, setPhase] = useState<"bet" | "spin" | "win" | "lose">("bet");
   const [error, setError] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [vibeOn, setVibeOn] = useState(true);
-  const [flash, setFlash] = useState(false);
+  const [dragOver, setDragOver] = useState<string | null>(null);
   const tickRef = useRef<number | null>(null);
 
   const bal = Number(tokenBalance ?? 0);
-  const effectiveStake = customStake.trim()
-    ? Math.min(10000, Math.max(50, Number(customStake) || 0))
-    : stake;
+  const totalStake = useMemo(
+    () => Object.values(spots).reduce((a, chips) => a + sumChips(chips), 0),
+    [spots],
+  );
 
-  const conic = useMemo(() => {
-    return WHEEL_ORDER.map((n, i) => {
-      const start = (i / WHEEL_ORDER.length) * 100;
-      const end = ((i + 1) / WHEEL_ORDER.length) * 100;
-      const c = pocketColor(n);
-      const hex = c === "green" ? "#0d9f6e" : c === "red" ? "#c41e3a" : "#141414";
-      return `${hex} ${start}% ${end}%`;
-    }).join(", ");
-  }, []);
+  const conic = useMemo(
+    () =>
+      WHEEL_ORDER.map((n, i) => {
+        const start = (i / WHEEL_ORDER.length) * 100;
+        const end = ((i + 1) / WHEEL_ORDER.length) * 100;
+        const c = pocketColor(n);
+        const hex = c === "green" ? "#0d9f6e" : c === "red" ? "#c41e3a" : "#141414";
+        return `${hex} ${start}% ${end}%`;
+      }).join(", "),
+    [],
+  );
 
-  function resolveBetPayload(): string | null {
-    if (betKind === "number") {
-      if (pickNumber == null) return null;
-      return `n${pickNumber}`;
+  function placeOnSpot(spot: string, value: ChipValue = selectedChip) {
+    if (spinning || pending || phase === "spin") return;
+    if (totalStake + value > bal) {
+      setError("💰 No tienes fichas suficientes.");
+      return;
     }
-    return betKind;
+    setError(null);
+    setSpots((prev) => ({
+      ...prev,
+      [spot]: [...(prev[spot] ?? []), value],
+    }));
+    if (soundOn) playChipSound();
+    if (vibeOn) vibrate(12);
+  }
+
+  function clearBets() {
+    if (spinning || pending) return;
+    setSpots({});
+    setError(null);
+  }
+
+  function undoLast() {
+    if (spinning || pending) return;
+    setSpots((prev) => {
+      const keys = Object.keys(prev);
+      if (!keys.length) return prev;
+      const last = keys[keys.length - 1];
+      const arr = [...(prev[last] ?? [])];
+      arr.pop();
+      const next = { ...prev };
+      if (arr.length) next[last] = arr;
+      else delete next[last];
+      return next;
+    });
   }
 
   function stopTicks() {
@@ -148,17 +193,14 @@ export function CasinoRoulette({
 
   function spin() {
     if (spinning || pending) return;
-    const bet = resolveBetPayload();
-    if (!bet) {
-      setError("Elige un número concreto.");
-      setShowNumbers(true);
+    const bets = Object.entries(spots)
+      .map(([spot, chips]) => ({ spot, amount: sumChips(chips) }))
+      .filter((b) => b.amount > 0);
+    if (!bets.length) {
+      setError("Coloca al menos una ficha en la mesa.");
       return;
     }
-    if (effectiveStake < 50 || effectiveStake > 10000) {
-      setError("Apuesta entre 50 y 10.000 ★");
-      return;
-    }
-    if (effectiveStake > bal) {
+    if (totalStake > bal) {
       setError("💰 No tienes fichas suficientes para jugar.");
       return;
     }
@@ -166,74 +208,112 @@ export function CasinoRoulette({
     setError(null);
     setResult(null);
     setSpinning(true);
-    setFlash(false);
+    setPhase("spin");
 
     startTransition(async () => {
       try {
-        const r = await spinCasinoRouletteAction(effectiveStake, bet);
+        const r = await spinCasinoRouletteAction(bets);
         if (r?.error) {
           setError(r.error);
           setSpinning(false);
+          setPhase("bet");
           return;
         }
         const payload = (r?.payload ?? {}) as SpinPayload;
         const n = Number(payload.number ?? 0);
         const idx = WHEEL_ORDER.findIndex((x) => x === n);
         const pocketAngle = (idx >= 0 ? idx : 0) * SEG + SEG / 2;
-
-        // Wheel spins clockwise many turns; ball opposite then lands on pocket under pointer (top).
-        const wheelTarget = wheelRot + 360 * 6 + (360 - pocketAngle);
-        const ballTarget = ballRot - 360 * 8 - pocketAngle;
-
-        setWheelRot(wheelTarget);
-        setBallRot(ballTarget);
+        setWheelRot((w) => w + 360 * 6 + (360 - pocketAngle));
+        setBallRot((b) => b - 360 * 8 - pocketAngle);
 
         if (vibeOn) vibrate(20);
         if (soundOn) {
           stopTicks();
           let f = 380;
           tickRef.current = window.setInterval(() => {
-            playCasinoTick(f);
-            f = Math.max(180, f - 8);
-          }, 90);
+            playChipSound();
+            f = Math.max(180, f - 10);
+            void f;
+          }, 95);
         }
 
         window.setTimeout(() => {
           stopTicks();
           setResult(payload);
           setSpinning(false);
-          setFlash(true);
-          if (soundOn) playCasinoTick(payload.result === "win" ? 660 : 220);
-          if (vibeOn) vibrate(payload.result === "win" ? [40, 40, 100] : 70);
+          const won = payload.result === "win";
+          setPhase(won ? "win" : "lose");
+          if (vibeOn) vibrate(won ? [40, 40, 100] : 70);
+          if (!won) {
+            window.setTimeout(() => setSpots({}), 700);
+          }
           router.refresh();
-          window.setTimeout(() => setFlash(false), 1600);
         }, 5200);
       } catch {
         stopTicks();
         setError("No se pudo girar.");
         setSpinning(false);
+        setPhase("bet");
       }
     });
+  }
+
+  function playAgain() {
+    setResult(null);
+    setSpots({});
+    setPhase("bet");
+    setError(null);
+  }
+
+  function onDragStart(e: React.DragEvent, value: ChipValue) {
+    e.dataTransfer.setData("text/chip", String(value));
+    e.dataTransfer.effectAllowed = "copy";
+  }
+
+  function onDropSpot(e: React.DragEvent, spot: string) {
+    e.preventDefault();
+    setDragOver(null);
+    const raw = e.dataTransfer.getData("text/chip");
+    const value = Number(raw) as ChipValue;
+    if (CHIPS.some((c) => c.value === value)) placeOnSpot(spot, value);
+  }
+
+  function spotHandlers(spot: string) {
+    return {
+      onClick: () => placeOnSpot(spot),
+      onDragOver: (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(spot);
+      },
+      onDragLeave: () => setDragOver(null),
+      onDrop: (e: React.DragEvent) => onDropSpot(e, spot),
+    };
+  }
+
+  function spotClass(spot: string, extra = "") {
+    return [
+      "table-spot",
+      dragOver === spot ? "table-spot-hot" : "",
+      phase === "lose" && spots[spot] ? "table-spot-lose" : "",
+      phase === "win" && spots[spot] ? "table-spot-win" : "",
+      extra,
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
   const net = Number(result?.tokens ?? 0);
   const colorEmoji =
     result?.color === "red" ? "🔴" : result?.color === "black" ? "⚫" : "🟢";
 
-  const played = Number(stats?.played ?? 0);
-  const won = Number(stats?.won ?? 0);
-  const lost = Number(stats?.lost ?? 0);
-  const tw = Number(stats?.tokens_won ?? 0);
-  const tl = Number(stats?.tokens_lost ?? 0);
-
   return (
-    <div className={`game-card game-card-ruleta-casino euro-roulette space-y-4 ${flash ? "euro-flash" : ""}`}>
+    <div className="game-card game-card-ruleta-casino euro-roulette casino-table-wrap space-y-4">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">
-        DrinkCasino · Europea
+        DrinkCasino · Mesa europea
       </p>
       <h2 className="font-display text-3xl text-[var(--ink-strong)]">Ruleta Casino</h2>
       <p className="text-sm text-[var(--muted)]">
-        0–36 · Rojo/Negro ×2 · Número ×35 · {bal.toLocaleString("es-ES")} ★
+        Elige ficha · toca o arrastra a la mesa · {bal.toLocaleString("es-ES")} ★
       </p>
 
       <div className="flex justify-center gap-2">
@@ -257,7 +337,6 @@ export function CasinoRoulette({
         </button>
       </div>
 
-      {/* Wheel */}
       <div className="euro-stage">
         <div className="euro-lights" aria-hidden />
         <div className="euro-pointer" aria-hidden />
@@ -275,9 +354,7 @@ export function CasinoRoulette({
             <span
               key={n}
               className="euro-label"
-              style={{
-                transform: `rotate(${i * SEG + SEG / 2}deg)`,
-              }}
+              style={{ transform: `rotate(${i * SEG + SEG / 2}deg)` }}
             >
               {n}
             </span>
@@ -297,205 +374,174 @@ export function CasinoRoulette({
         <div className="euro-hub font-display">★</div>
       </div>
 
-      {!result ? (
+      {phase === "bet" || phase === "spin" ? (
         <>
-          <div className="space-y-2">
-            <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
-              Fichas · {effectiveStake.toLocaleString("es-ES")} ★
+          <div className="chip-tray">
+            <p className="mb-2 text-center text-[10px] uppercase tracking-wider text-[var(--muted)]">
+              Fichas
             </p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {STAKES.map((s) => (
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {CHIPS.map((c) => (
                 <button
-                  key={s}
+                  key={c.value}
                   type="button"
-                  onClick={() => {
-                    setStake(s);
-                    setCustomStake("");
-                  }}
-                  className={`min-h-12 rounded-xl text-xs font-bold ${
-                    !customStake && stake === s
-                      ? "bg-[var(--amber)] text-[#0b1512]"
-                      : "border border-[var(--line)]"
+                  draggable={!spinning}
+                  onDragStart={(e) => onDragStart(e, c.value)}
+                  onClick={() => setSelectedChip(c.value)}
+                  className={`casino-chip chip-${c.tone} ${
+                    selectedChip === c.value ? "chip-selected" : ""
                   }`}
+                  aria-label={`Ficha ${c.value}`}
                 >
-                  {s}
+                  {c.label}
                 </button>
               ))}
             </div>
-            <input
-              className="input min-h-12"
-              inputMode="numeric"
-              placeholder="Cantidad personalizada (50–10000)"
-              value={customStake}
-              onChange={(e) => setCustomStake(e.target.value.replace(/[^\d]/g, ""))}
-            />
+            <p className="mt-2 text-center text-xs text-[var(--amber)]">
+              Apuesta en mesa · {totalStake.toLocaleString("es-ES")} ★
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
-              Apuesta rápida · {betLabel(betKind, pickNumber)}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="roulette-felt">
+            <button type="button" {...spotHandlers("n0")} className={spotClass("n0", "spot-zero")}>
+              <span>0</span>
+              {spots.n0 ? <ChipStack chips={spots.n0} /> : null}
+            </button>
+
+            <div className="felt-numbers">
+              {Array.from({ length: 36 }, (_, i) => i + 1).map((n) => {
+                const spot = `n${n}`;
+                const color = pocketColor(n);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    {...spotHandlers(spot)}
+                    className={spotClass(spot, `spot-num spot-${color}`)}
+                  >
+                    <span>{n}</span>
+                    {spots[spot] ? <ChipStack chips={spots[spot]} /> : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="felt-outside">
               {(
                 [
-                  ["red", "🔴 Rojo ×2"],
-                  ["black", "⚫ Negro ×2"],
-                  ["even", "⚪ Par ×2"],
-                  ["odd", "⚪ Impar ×2"],
-                  ["low", "⬇️ 1-18 ×2"],
-                  ["high", "⬆️ 19-36 ×2"],
+                  ["red", "Rojo"],
+                  ["black", "Negro"],
+                  ["even", "Par"],
+                  ["odd", "Impar"],
+                  ["low", "1-18"],
+                  ["high", "19-36"],
                 ] as const
-              ).map(([k, label]) => (
+              ).map(([spot, label]) => (
                 <button
-                  key={k}
+                  key={spot}
                   type="button"
-                  onClick={() => {
-                    setBetKind(k);
-                    setShowNumbers(false);
-                  }}
-                  className={`min-h-14 rounded-2xl text-sm font-bold ${
-                    betKind === k && !showNumbers
-                      ? k === "red"
-                        ? "bg-[var(--danger)] text-white"
-                        : k === "black"
-                          ? "bg-[#1a1a1a] text-white border border-[var(--line)]"
-                          : "bg-[var(--ink)] text-[#0b1512]"
-                      : "border border-[var(--line)]"
-                  }`}
+                  {...spotHandlers(spot)}
+                  className={spotClass(spot, `spot-out spot-out-${spot}`)}
                 >
-                  {label}
+                  <span>{label}</span>
+                  {spots[spot] ? <ChipStack chips={spots[spot]} /> : null}
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setBetKind("number");
-                setShowNumbers(true);
-              }}
-              className={`min-h-14 w-full rounded-2xl text-sm font-bold ${
-                betKind === "number"
-                  ? "bg-[var(--teal)] text-[#0b1512]"
-                  : "border border-[var(--line)]"
-              }`}
-            >
-              🎯 Número concreto ×35
-              {pickNumber != null ? ` · ${pickNumber}` : ""}
-            </button>
           </div>
-
-          {showNumbers || betKind === "number" ? (
-            <div className="euro-number-grid">
-              <button
-                type="button"
-                className={`euro-num euro-num-0 ${pickNumber === 0 ? "euro-num-active" : ""}`}
-                onClick={() => {
-                  setPickNumber(0);
-                  setBetKind("number");
-                }}
-              >
-                0
-              </button>
-              {Array.from({ length: 36 }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`euro-num ${pocketColor(n) === "red" ? "euro-num-red" : "euro-num-black"} ${
-                    pickNumber === n ? "euro-num-active" : ""
-                  }`}
-                  onClick={() => {
-                    setPickNumber(n);
-                    setBetKind("number");
-                  }}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          ) : null}
 
           {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
-          <button
-            type="button"
-            disabled={spinning || pending}
-            onClick={spin}
-            className="mega-cta !min-h-14 w-full !text-base"
-          >
-            {spinning || pending ? "Girando…" : `🎡 Girar · ${effectiveStake.toLocaleString("es-ES")} ★`}
-          </button>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              disabled={spinning || pending || !totalStake}
+              onClick={undoLast}
+              className="btn-ghost min-h-12 text-xs"
+            >
+              Deshacer
+            </button>
+            <button
+              type="button"
+              disabled={spinning || pending || !totalStake}
+              onClick={clearBets}
+              className="btn-ghost min-h-12 text-xs"
+            >
+              Limpiar
+            </button>
+            <button
+              type="button"
+              disabled={spinning || pending || !totalStake}
+              onClick={spin}
+              className="mega-cta !min-h-12 !text-sm"
+            >
+              {spinning || pending ? "…" : "Girar"}
+            </button>
+          </div>
         </>
-      ) : (
+      ) : null}
+
+      {result && (phase === "win" || phase === "lose") ? (
         <div
           className={`roulette-result roulette-result-fullscreen ${
-            result.result === "win" ? "bj-result-win" : "bj-result-lose"
+            phase === "win" ? "bj-result-win" : "bj-result-lose"
           }`}
         >
           <div className="roulette-confetti" aria-hidden />
           <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-            🎡 Resultado
+            Resultado
           </p>
           <p className="mt-2 font-display text-5xl">
             {colorEmoji} {result.number}
           </p>
           <h3 className="mt-2 font-display text-3xl">
-            {result.result === "win" ? "🏆 Has ganado" : "❌ Has perdido"}
+            {phase === "win" ? "Has ganado" : "Has perdido"}
           </h3>
           <p className="mt-2 font-display text-2xl text-[var(--amber)]">
             {net >= 0 ? `+${net.toLocaleString("es-ES")}` : net.toLocaleString("es-ES")} fichas
           </p>
           <p className="text-xs text-[var(--muted)]">
-            Apuesta · {betLabel(
-              String(result.bet ?? "").startsWith("n")
-                ? "number"
-                : ((result.bet as OutsideBet) ?? "red"),
-              result.bet_number ??
-                (String(result.bet ?? "").startsWith("n")
-                  ? Number(String(result.bet).slice(1))
-                  : null),
-            )}{" "}
-            · +{result.xp ?? 0} XP
+            Apostado {Number(result.stake ?? 0).toLocaleString("es-ES")} ★ · +{result.xp ?? 0} XP
           </p>
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              disabled={spinning || pending}
-              onClick={() => setResult(null)}
-              className="mega-cta !min-h-14 !text-base"
-            >
-              🔄 Volver a jugar
+            <button type="button" onClick={playAgain} className="mega-cta !min-h-14 !text-base">
+              Volver a jugar
             </button>
             <button
               type="button"
               onClick={() => router.push("/app/casino")}
               className="btn-primary min-h-14 text-base"
             >
-              🚪 Salir
+              Salir
             </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="stat-chip p-2 text-center">
           <p className="text-[9px] text-[var(--muted)]">Jugadas</p>
-          <p className="font-display text-lg">{played}</p>
+          <p className="font-display text-lg">{stats?.played ?? 0}</p>
         </div>
         <div className="stat-chip p-2 text-center">
           <p className="text-[9px] text-[var(--muted)]">G/P</p>
           <p className="font-display text-lg">
-            <span className="text-[var(--teal)]">{won}</span>/
-            <span className="text-[var(--danger)]">{lost}</span>
+            <span className="text-[var(--teal)]">{stats?.won ?? 0}</span>/
+            <span className="text-[var(--danger)]">{stats?.lost ?? 0}</span>
           </p>
         </div>
         <div className="stat-chip p-2 text-center">
           <p className="text-[9px] text-[var(--muted)]">Neto</p>
-          <p className="font-display text-lg">{(tw - tl).toLocaleString("es-ES")}</p>
+          <p className="font-display text-lg">
+            {(Number(stats?.tokens_won ?? 0) - Number(stats?.tokens_lost ?? 0)).toLocaleString(
+              "es-ES",
+            )}
+          </p>
         </div>
         <div className="stat-chip p-2 text-center">
           <p className="text-[9px] text-[var(--muted)]">Favorito</p>
           <p className="font-display text-lg">
-            {stats?.favorite_number != null ? stats.favorite_number : "—"}
+            {stats?.favorite_number != null ? stats.favorite_number : "-"}
           </p>
         </div>
       </div>

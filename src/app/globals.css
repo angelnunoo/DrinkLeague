@@ -1709,3 +1709,216 @@ body {
     font-size: 4.5rem;
   }
 }
+
+
+/* -- Casino chip table -- */
+.casino-table-wrap {
+  overflow-x: hidden;
+}
+
+.chip-tray {
+  border-radius: 1.25rem;
+  border: 1px solid var(--line);
+  background: rgba(7, 16, 14, 0.55);
+  padding: 0.85rem 0.75rem;
+}
+
+.casino-chip {
+  position: relative;
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 50%;
+  border: 3px dashed rgba(255, 255, 255, 0.55);
+  font-weight: 900;
+  font-size: 0.78rem;
+  color: #0b1512;
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.35),
+    0 8px 16px rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  touch-action: none;
+}
+
+.casino-chip:active {
+  transform: scale(0.94);
+}
+
+.chip-selected {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+  transform: translateY(-3px) scale(1.06);
+}
+
+.chip-white {
+  background: radial-gradient(circle at 35% 30%, #fff, #d7d7d7 70%);
+}
+.chip-blue {
+  background: radial-gradient(circle at 35% 30%, #93c5fd, #2563eb 70%);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.7);
+}
+.chip-green {
+  background: radial-gradient(circle at 35% 30%, #6ee7b7, #059669 70%);
+  color: #052e1c;
+}
+.chip-red {
+  background: radial-gradient(circle at 35% 30%, #fda4af, #dc2626 70%);
+  color: #fff;
+}
+.chip-black {
+  background: radial-gradient(circle at 35% 30%, #525252, #171717 70%);
+  color: #ffd56a;
+  border-color: rgba(255, 213, 106, 0.55);
+}
+
+.chip-mini {
+  width: 1.55rem;
+  height: 1.55rem;
+  font-size: 0.52rem;
+  border-width: 2px;
+  position: absolute;
+  left: 50%;
+  bottom: 0.2rem;
+  margin-left: -0.775rem;
+  pointer-events: none;
+}
+
+.chip-stack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.15rem;
+  height: 2rem;
+  pointer-events: none;
+}
+
+.chip-stack-total {
+  position: absolute;
+  right: 0.2rem;
+  top: 0.15rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #ffd56a;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.chip-stack-fly {
+  animation: chip-fly 0.9s ease forwards;
+}
+
+@keyframes chip-fly {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-70px) scale(0.6); }
+}
+
+.roulette-felt {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 213, 106, 0.2);
+  background:
+    radial-gradient(500px 200px at 50% 0%, rgba(16, 185, 129, 0.18), transparent),
+    linear-gradient(160deg, #0d3b2e, #07241c 55%, #0a1f18);
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
+}
+
+.table-spot {
+  position: relative;
+  min-height: 2.6rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 800;
+  font-size: 0.78rem;
+  color: #fff;
+  overflow: hidden;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.table-spot-hot {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 2px rgba(240, 162, 2, 0.35);
+  transform: scale(1.02);
+}
+
+.table-spot-lose {
+  animation: chip-vanish 0.65s ease forwards;
+}
+
+.table-spot-win .chip-stack {
+  animation: chip-fly 0.9s ease forwards;
+}
+
+@keyframes chip-vanish {
+  to { opacity: 0.35; filter: grayscale(0.6); }
+}
+
+.spot-zero {
+  width: 100%;
+  min-height: 2.8rem;
+  background: #0d9f6e;
+}
+
+.felt-numbers {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.28rem;
+}
+
+.spot-num {
+  min-height: 2.55rem;
+  aspect-ratio: 1 / 1.05;
+}
+
+.spot-red {
+  background: #c41e3a;
+}
+
+.spot-black {
+  background: #1a1a1a;
+}
+
+.felt-outside {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.spot-out {
+  min-height: 3rem;
+  font-size: 0.85rem;
+}
+
+.spot-out-red {
+  background: linear-gradient(160deg, #e11d48, #9f1239);
+}
+
+.spot-out-black {
+  background: linear-gradient(160deg, #404040, #171717);
+}
+
+.spot-out-even,
+.spot-out-odd,
+.spot-out-low,
+.spot-out-high {
+  background: rgba(7, 40, 30, 0.85);
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+@media (max-width: 380px) {
+  .casino-chip {
+    width: 2.9rem;
+    height: 2.9rem;
+    font-size: 0.7rem;
+  }
+  .felt-numbers {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.22rem;
+  }
+  .spot-num {
+    min-height: 2.2rem;
+    font-size: 0.7rem;
+  }
+}
