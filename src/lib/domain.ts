@@ -56,6 +56,13 @@ export function formatInviteLink(code: string, origin?: string): string {
   return `${base.replace(/\/$/, "")}/join/${encodeURIComponent(code)}`;
 }
 
+/** Deep link so someone can open DrinkLeague and send you a friend request. */
+export function formatFriendInviteLink(friendCode: string, origin?: string): string {
+  const base = origin ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const code = encodeURIComponent(friendCode.trim().toUpperCase());
+  return `${base.replace(/\/$/, "")}/friend/add?code=${code}`;
+}
+
 function getZonedParts(date: Date, timeZone: string) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone,

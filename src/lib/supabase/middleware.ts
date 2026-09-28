@@ -53,8 +53,23 @@ export async function updateSession(request: NextRequest) {
   if (user && (path === "/login" || path === "/register" || path === "/forgot-password")) {
     const next = request.nextUrl.searchParams.get("next");
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = next && next.startsWith("/app") ? next : "/app";
-    redirectUrl.search = "";
+    const safeNext =
+      next &&
+      (next.startsWith("/app") ||
+        next.startsWith("/friend/") ||
+        next.startsWith("/friend?") ||
+        next.startsWith("/join/"))
+        ? next
+        : "/app";
+    // Prefer absolute path navigation
+    if (safeNext.startsWith("http")) {
+      redirectUrl.pathname = "/app";
+      redirectUrl.search = "";
+    } else {
+      const [pathname, search = ""] = safeNext.split("?");
+      redirectUrl.pathname = pathname || "/app";
+      redirectUrl.search = search ? `?${search}` : "";
+    }
     return NextResponse.redirect(redirectUrl);
   }
 

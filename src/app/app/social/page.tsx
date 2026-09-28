@@ -5,7 +5,8 @@ import { getCurrentProfile, getMyLeagues } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { FriendActions } from "@/components/friend-actions";
 import { LeagueInviteShare } from "@/components/league-invite-share";
-import { formatInviteLink } from "@/lib/domain";
+import { FriendInviteShare } from "@/components/friend-invite-share";
+import { formatFriendInviteLink, formatInviteLink } from "@/lib/domain";
 import { appOriginFromHeaders } from "@/lib/supabase/cookie-options";
 
 function chemTier(score: number): string {
@@ -17,13 +18,20 @@ function chemTier(score: number): string {
   return "Desconocidos";
 }
 
-export default async function SocialPage() {
+export default async function SocialPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ friend_sent?: string }>;
+}) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  const sp = await searchParams;
 
   const supabase = await createClient();
   const origin = appOriginFromHeaders(await headers());
   const myLeagues = await getMyLeagues();
+  const friendCode = (profile.friend_code ?? "").toUpperCase();
+  const friendInviteUrl = friendCode ? formatFriendInviteLink(friendCode, origin) : "";
 
   const leagueInvites = await Promise.all(
     myLeagues.slice(0, 4).map(async (league) => {
@@ -78,15 +86,33 @@ export default async function SocialPage() {
       <div>
         <h1 className="font-display text-3xl">Social</h1>
         <p className="mt-1 text-[var(--muted)]">
-          Invita a tu liga por WhatsApp, amigos y química.
+          Invita amigos y ligas por WhatsApp.
         </p>
       </div>
+
+      {sp.friend_sent ? (
+        <p className="rounded-2xl bg-[color-mix(in_srgb,var(--teal)_15%,transparent)] px-4 py-3 text-sm text-[var(--teal)]">
+          Solicitud de amistad enviada.
+        </p>
+      ) : null}
+
+      {friendCode ? (
+        <FriendInviteShare
+          displayName={profile.display_name}
+          friendCode={friendCode}
+          inviteUrl={friendInviteUrl}
+        />
+      ) : (
+        <div className="surface p-5 text-sm text-[var(--muted)]">
+          Aún no tienes código de amigo. Recarga el perfil o contacta soporte.
+        </div>
+      )}
 
       <div className="space-y-4">
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Ligas</p>
-            <h2 className="font-display text-xl">Invitar por enlace</h2>
+            <h2 className="font-display text-xl">Invitar a tu liga</h2>
           </div>
           <Link href="/app/join" className="btn-ghost text-xs">
             Unirme con código
@@ -126,7 +152,10 @@ export default async function SocialPage() {
       <div className="surface p-5">
         <p className="text-sm text-[var(--muted)]">Tu código de amigo</p>
         <p className="font-display text-3xl tracking-[0.25em] text-[var(--amber)]">
-          {profile.friend_code ?? "———"}
+          {friendCode || "———"}
+        </p>
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          O introduce el código de otra persona aquí debajo.
         </p>
       </div>
 
