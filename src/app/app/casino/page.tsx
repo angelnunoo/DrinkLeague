@@ -20,6 +20,7 @@ type GameStat = {
   tokens_lost?: number;
   biggest_win?: number;
   podiums?: number;
+  favorite_number?: number | null;
 };
 
 type HubMission = {
@@ -383,7 +384,7 @@ export default async function CasinoPage({
               meId={profile.id}
               tokenBalance={tokens}
             />
-            <CasinoRoulette tokenBalance={tokens} />
+            <CasinoRoulette tokenBalance={tokens} stats={byType.get("ruleta_casino") ?? null} />
             <BingoBoard
               tokenBalance={tokens}
               friends={friendUsers}

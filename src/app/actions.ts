@@ -1289,7 +1289,7 @@ export async function spinSocialRouletteAction(): Promise<ActionResult> {
 
 export async function spinCasinoRouletteAction(
   stake: number,
-  bet: "red" | "black" | "green",
+  bet: string,
 ): Promise<ActionResult> {
   try {
     const supabase = await createClient();

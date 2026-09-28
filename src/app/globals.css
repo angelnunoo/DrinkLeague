@@ -1341,3 +1341,176 @@ body {
     radial-gradient(320px 180px at 50% 20%, rgba(240, 162, 2, 0.28), transparent),
     rgba(7, 16, 14, 0.88);
 }
+
+
+/* -- European Roulette -- */
+.euro-roulette {
+  overflow-x: hidden;
+}
+
+.euro-stage {
+  position: relative;
+  width: min(100%, 19rem);
+  margin: 0.25rem auto 0.75rem;
+  aspect-ratio: 1;
+}
+
+.euro-lights {
+  position: absolute;
+  inset: -0.35rem;
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(240, 162, 2, 0.35),
+      transparent 12%,
+      rgba(45, 212, 191, 0.25),
+      transparent 28%,
+      rgba(240, 162, 2, 0.35),
+      transparent 45%,
+      rgba(255, 213, 106, 0.3),
+      transparent 62%,
+      rgba(45, 212, 191, 0.2),
+      transparent 80%,
+      rgba(240, 162, 2, 0.35)
+    );
+  animation: euro-lights 2.8s linear infinite;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.euro-pointer {
+  position: absolute;
+  top: 0.15rem;
+  left: 50%;
+  z-index: 5;
+  width: 0;
+  height: 0;
+  border-left: 0.55rem solid transparent;
+  border-right: 0.55rem solid transparent;
+  border-top: 0.95rem solid var(--amber);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.euro-wheel {
+  position: absolute;
+  inset: 0.85rem;
+  border-radius: 50%;
+  border: 5px solid #c9a227;
+  box-shadow:
+    0 0 0 7px #1a1208,
+    0 0 0 9px rgba(255, 213, 106, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    inset 0 0 28px rgba(0, 0, 0, 0.4);
+  will-change: transform;
+}
+
+.euro-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.4rem;
+  margin-left: -0.7rem;
+  margin-top: -44%;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-align: center;
+  color: #fff;
+  transform-origin: 50% 220%;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.euro-ball-track {
+  position: absolute;
+  inset: 0.55rem;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+  z-index: 4;
+}
+
+.euro-ball {
+  position: absolute;
+  top: 0.15rem;
+  left: 50%;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-left: -0.35rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #d4d4d4 55%, #888);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+
+.euro-hub {
+  position: absolute;
+  inset: 38%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe08a, #c47a00 70%);
+  color: #1a1208;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.euro-number-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem;
+  max-width: 100%;
+}
+
+.euro-num {
+  min-height: 2.5rem;
+  border-radius: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.euro-num-0 {
+  grid-column: 1 / -1;
+  background: #0d9f6e;
+}
+
+.euro-num-red {
+  background: #c41e3a;
+}
+
+.euro-num-black {
+  background: #1a1a1a;
+  border-color: rgba(232, 240, 236, 0.12);
+}
+
+.euro-num-active {
+  outline: 2px solid var(--amber);
+  box-shadow: 0 0 12px rgba(240, 162, 2, 0.45);
+  transform: scale(1.04);
+}
+
+.euro-flash {
+  animation: bj-win-burst 0.55s ease both;
+}
+
+@keyframes euro-lights {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 380px) {
+  .euro-stage {
+    width: min(100%, 16.5rem);
+  }
+  .euro-label {
+    font-size: 0.5rem;
+  }
+  .euro-num {
+    min-height: 2.25rem;
+    font-size: 0.72rem;
+  }
+}
