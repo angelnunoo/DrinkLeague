@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { playPeajeStepAction, drawReyAction, playDueloAction } from "@/app/actions";
-import { rethrowNextNavigation } from "@/lib/navigation";
 import { SpanishPlayingCard, type SpanishCard, SUIT_META, RANK_LABELS } from "./spanish-card";
 
 type PeajeState = {
@@ -20,6 +20,7 @@ type PeajeState = {
 };
 
 export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: PeajeState }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const phase = initial.phase ?? "intro";
@@ -28,13 +29,12 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
   function run(guess: string) {
     setError(null);
     startTransition(async () => {
-      try {
-        const r = await playPeajeStepAction(sessionId, guess);
-        if (r?.error) setError(r.error);
-      } catch (e) {
-        rethrowNextNavigation(e);
-        setError("No se pudo jugar el paso.");
+      const r = await playPeajeStepAction(sessionId, guess);
+      if (r?.error) {
+        setError(r.error);
+        return;
       }
+      router.refresh();
     });
   }
 
@@ -251,6 +251,7 @@ export function ReyPlay({
   initial: ReyState;
   players: string[];
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const phase = initial.phase ?? "intro";
@@ -260,12 +261,12 @@ export function ReyPlay({
   function draw() {
     setError(null);
     startTransition(async () => {
-      try {
-        await drawReyAction(sessionId);
-      } catch (e) {
-        rethrowNextNavigation(e);
-        setError("No se pudo sacar carta.");
+      const r = await drawReyAction(sessionId);
+      if (r?.error) {
+        setError(r.error);
+        return;
       }
+      router.refresh();
     });
   }
 
@@ -374,6 +375,7 @@ export function DueloPlay({
   meName: string;
   rivalName: string;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const phase = initial.phase ?? "intro";
@@ -383,12 +385,12 @@ export function DueloPlay({
   function start() {
     setError(null);
     startTransition(async () => {
-      try {
-        await playDueloAction(sessionId);
-      } catch (e) {
-        rethrowNextNavigation(e);
-        setError("No se pudo iniciar el duelo.");
+      const r = await playDueloAction(sessionId);
+      if (r?.error) {
+        setError(r.error);
+        return;
       }
+      router.refresh();
     });
   }
 

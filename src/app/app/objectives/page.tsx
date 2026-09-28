@@ -68,7 +68,7 @@ export default async function ObjectivesPage() {
       ) : null}
 
       <Link href="/app" className="text-sm text-[var(--muted)]">
-        ← Inicio
+        ← Atrás
       </Link>
     </section>
   );

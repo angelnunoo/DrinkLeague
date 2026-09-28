@@ -21,16 +21,14 @@ export default function AppError({
       </p>
       <h1 className="font-display text-3xl">Ha ocurrido un error</h1>
       <p className="max-w-sm text-sm text-[var(--muted)]">
-        Algo no ha ido bien. Puedes reintentar o volver atrás.
+        Algo no ha ido bien. Puedes reintentar.
       </p>
-      <div className="flex w-full max-w-xs flex-col gap-3">
-        <button type="button" onClick={reset} className="btn-primary min-h-12 w-full">
-          Reintentar
-        </button>
-        <Link href="/app/games" className="btn-ghost min-h-12 w-full">
-          ← Juegos
-        </Link>
-      </div>
+      <button type="button" onClick={reset} className="btn-primary min-h-12 w-full max-w-xs">
+        Reintentar
+      </button>
+      <Link href="/app/games" className="text-sm text-[var(--muted)]">
+        ← Juegos
+      </Link>
     </section>
   );
 }

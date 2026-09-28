@@ -30,7 +30,7 @@ export default async function MyDrinksPage({
     <section className="animate-rise space-y-6">
       <div>
         <Link href="/app" className="text-sm text-[var(--muted)] hover:text-[var(--ink)]">
-          ← Inicio
+          ← Atrás
         </Link>
         <h1 className="mt-2 font-display text-3xl">🍺 Mis consumiciones</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">

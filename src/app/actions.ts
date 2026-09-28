@@ -470,6 +470,10 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
   const opponentUserId = String(formData.get("opponent_user_id") ?? "").trim() || null;
   const opponentName = String(formData.get("opponent_name") ?? "").trim() || null;
 
+  if (!["peaje", "rey", "duelo"].includes(gameType)) {
+    return { error: "Juego no válido." };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("start_game", {
     p_game_type: gameType,
@@ -479,7 +483,12 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
     p_opponent_name: opponentName,
   });
   if (error) return { error: friendlyLeagueError(error.message) || error.message };
-  redirect(`/app/games/${data}`);
+  if (!data) return { error: "No se pudo crear la partida." };
+  return {
+    success: true,
+    message: "Partida creada",
+    payload: { sessionId: String(data) },
+  };
 }
 
 async function notifyGameMilestone(sessionId: string) {
@@ -535,31 +544,24 @@ async function notifyGameMilestone(sessionId: string) {
   }
 }
 
-export async function playDueloAction(sessionId: string): Promise<void> {
+export async function playDueloAction(sessionId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("play_duelo_round", { p_session_id: sessionId });
-  if (error) redirect(`/app/games/${sessionId}?error=${encodeURIComponent(error.message)}`);
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
   await notifyGameMilestone(sessionId);
-  redirect(`/app/games/${sessionId}`);
+  return { success: true };
 }
 
-export async function drawReyAction(sessionId: string): Promise<void> {
+export async function drawReyAction(sessionId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("draw_rey_card", { p_session_id: sessionId });
-  if (error) redirect(`/app/games/${sessionId}?error=${encodeURIComponent(error.message)}`);
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
   await notifyGameMilestone(sessionId);
-  redirect(`/app/games/${sessionId}`);
+  return { success: true };
 }
 
-export async function playPeajeAction(sessionId: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("play_peaje_step", {
-    p_session_id: sessionId,
-    p_guess: "start",
-  });
-  if (error) redirect(`/app/games/${sessionId}?error=${encodeURIComponent(error.message)}`);
-  await notifyGameMilestone(sessionId);
-  redirect(`/app/games/${sessionId}`);
+export async function playPeajeAction(sessionId: string): Promise<ActionResult> {
+  return playPeajeStepAction(sessionId, "start");
 }
 
 export async function playPeajeStepAction(
@@ -573,7 +575,7 @@ export async function playPeajeStepAction(
   });
   if (error) return { error: friendlyLeagueError(error.message) || error.message };
   await notifyGameMilestone(sessionId);
-  redirect(`/app/games/${sessionId}`);
+  return { success: true };
 }
 
 export async function settleBetMarketAction(formData: FormData): Promise<void> {

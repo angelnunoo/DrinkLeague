@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
 
 export default function GlobalError({
@@ -33,48 +32,24 @@ export default function GlobalError({
           <p style={{ fontSize: 48, margin: 0 }}>⚠️</p>
           <h1 style={{ fontSize: 28, marginTop: 12 }}>Ha ocurrido un error</h1>
           <p style={{ color: "#8fa39a", maxWidth: 320, margin: "8px auto 24px" }}>
-            Reintenta o vuelve atrás con el menú.
+            Reintenta. Usa el menú inferior para moverte.
           </p>
-          <div
+          <button
+            type="button"
+            onClick={reset}
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-              maxWidth: 280,
-              margin: "0 auto",
+              minHeight: 48,
+              borderRadius: 999,
+              border: "none",
+              background: "#f0a202",
+              color: "#14110a",
+              fontWeight: 700,
+              cursor: "pointer",
+              padding: "0 24px",
             }}
           >
-            <button
-              type="button"
-              onClick={reset}
-              style={{
-                minHeight: 48,
-                borderRadius: 999,
-                border: "none",
-                background: "#f0a202",
-                color: "#14110a",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Reintentar
-            </button>
-            <Link
-              href="/app/games"
-              style={{
-                minHeight: 48,
-                display: "grid",
-                placeItems: "center",
-                borderRadius: 999,
-                border: "1px solid rgba(232,240,236,0.2)",
-                color: "#e8f0ec",
-                textDecoration: "none",
-                fontWeight: 600,
-              }}
-            >
-              ← Juegos
-            </Link>
-          </div>
+            Reintentar
+          </button>
         </div>
       </body>
     </html>

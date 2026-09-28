@@ -205,7 +205,7 @@ export default async function MuseumPage() {
       </div>
 
       <Link href="/app" className="text-sm text-[var(--muted)]">
-        ← Inicio
+        ← Atrás
       </Link>
     </section>
   );

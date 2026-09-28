@@ -9,7 +9,6 @@ import { SubmitButton } from "@/components/auth-form";
 import { createClient } from "@/lib/supabase/client";
 
 const CODES = Object.keys(DRINK_POINTS) as DrinkCode[];
-const VENUE_PRESETS = ["Bar", "Pub", "Discoteca", "Festival", "Casa"];
 
 type SmartVenue = {
   venue_id: string;
@@ -17,6 +16,7 @@ type SmartVenue = {
   use_count: number;
   is_favorite: boolean;
   last_used_at: string;
+  source?: string;
 };
 
 type ConfirmState = {
@@ -70,23 +70,24 @@ export function LogDrinksForm({ mega = false }: { mega?: boolean }) {
   useEffect(() => {
     const supabase = createClient();
     void (async () => {
-      const { data: uv } = await supabase
-        .from("user_venues")
-        .select("venue_id, use_count, is_favorite, last_used_at, venues(display_name)")
-        .order("use_count", { ascending: false })
-        .limit(12);
-      if (!uv) return;
+      const { data: rows } = await supabase.rpc("suggest_my_venues", { p_limit: 30 });
+      if (!rows) return;
       setSmart(
-        uv.map((row) => {
-          const v = row.venues as unknown as { display_name: string } | null;
-          return {
-            venue_id: row.venue_id,
-            display_name: v?.display_name ?? "Lugar",
-            use_count: row.use_count,
-            is_favorite: row.is_favorite,
-            last_used_at: row.last_used_at,
-          };
-        }),
+        (rows as Array<{
+          venue_id: string;
+          display_name: string;
+          use_count: number;
+          is_favorite: boolean;
+          last_used_at: string;
+          source?: string;
+        }>).map((row) => ({
+          venue_id: row.venue_id,
+          display_name: row.display_name ?? "Lugar",
+          use_count: Number(row.use_count ?? 0),
+          is_favorite: Boolean(row.is_favorite),
+          last_used_at: row.last_used_at ?? "",
+          source: row.source,
+        })),
       );
     })();
   }, [confirm]);
@@ -104,10 +105,15 @@ export function LogDrinksForm({ mega = false }: { mega?: boolean }) {
   const q = venue.trim().toLowerCase();
   const suggestions = smart
     .filter((s) => !q || s.display_name.toLowerCase().includes(q))
-    .slice(0, 6);
-  const favorites = smart.filter((s) => s.is_favorite).slice(0, 4);
-  const recent = [...smart]
-    .sort((a, b) => b.last_used_at.localeCompare(a.last_used_at))
+    .slice(0, 8);
+  const favorites = smart.filter((s) => s.is_favorite || s.source === "favorite").slice(0, 4);
+  const mine = smart.filter((s) => s.source === "mine" || (!s.source && !s.is_favorite));
+  const recent = [...mine]
+    .sort((a, b) => (b.last_used_at || "").localeCompare(a.last_used_at || ""))
+    .slice(0, 4);
+  const leagueRecent = smart
+    .filter((s) => s.source === "league")
+    .sort((a, b) => (b.last_used_at || "").localeCompare(a.last_used_at || ""))
     .slice(0, 4);
 
   function bump(code: DrinkCode, delta: number) {
@@ -184,20 +190,6 @@ export function LogDrinksForm({ mega = false }: { mega?: boolean }) {
             </div>
           ) : null}
           <div className="mb-2 flex flex-wrap gap-2">
-            {VENUE_PRESETS.map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={`min-h-10 rounded-full border px-3 py-1.5 text-sm ${
-                  venue === v
-                    ? "border-[var(--amber)] bg-[color-mix(in_srgb,var(--amber)_20%,transparent)]"
-                    : "border-[var(--line)]"
-                }`}
-                onClick={() => setVenue(v)}
-              >
-                {v}
-              </button>
-            ))}
             {recent.map((v) => (
               <button
                 key={`r-${v.venue_id}`}
@@ -205,7 +197,17 @@ export function LogDrinksForm({ mega = false }: { mega?: boolean }) {
                 className="min-h-10 rounded-full border border-[var(--line)] px-3 py-1.5 text-xs text-[var(--muted)]"
                 onClick={() => setVenue(v.display_name)}
               >
-                {v.display_name} ·{v.use_count}
+                {v.display_name}
+              </button>
+            ))}
+            {leagueRecent.map((v) => (
+              <button
+                key={`l-${v.venue_id}`}
+                type="button"
+                className="min-h-10 rounded-full border border-[var(--teal)]/40 px-3 py-1.5 text-xs text-[var(--muted)]"
+                onClick={() => setVenue(v.display_name)}
+              >
+                📍 {v.display_name}
               </button>
             ))}
           </div>
@@ -214,7 +216,7 @@ export function LogDrinksForm({ mega = false }: { mega?: boolean }) {
             required
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
-            placeholder="Escribe o elige un lugar…"
+            placeholder="Escribe o elige un lugar de tus ligas…"
             className="input min-h-12"
             maxLength={80}
             autoComplete="off"

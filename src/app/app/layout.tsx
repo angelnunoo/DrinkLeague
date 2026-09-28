@@ -28,15 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-32 pt-5 sm:max-w-2xl sm:px-6 lg:max-w-4xl lg:px-8">
       <header className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <BrandMark href="/app" size="sm" />
-          <Link
-            href="/app"
-            className="rounded-full border border-[var(--amber)] bg-[color-mix(in_srgb,var(--amber)_15%,transparent)] px-3 py-1.5 text-xs font-bold text-[var(--amber)]"
-          >
-            ← Inicio
-          </Link>
-        </div>
+        <BrandMark href="/app" size="sm" />
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/app/activity"

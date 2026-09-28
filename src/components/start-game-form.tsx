@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { startGameAction } from "@/app/actions";
 import { SubmitButton } from "@/components/auth-form";
-import { rethrowNextNavigation } from "@/lib/navigation";
 
 const ART: Record<string, { emoji: string; className: string; tag: string }> = {
   peaje: { emoji: "🚧", className: "game-card-peaje", tag: "Suerte" },
@@ -47,6 +47,7 @@ export function StartGameForm({
   compact?: boolean;
   friends?: Array<{ id: string; display_name: string; friend_code: string }>;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<"friend" | "guest">("friend");
@@ -55,13 +56,18 @@ export function StartGameForm({
   function onSubmit(fd: FormData) {
     setError(null);
     startTransition(async () => {
-      try {
-        const r = await startGameAction(fd);
-        if (r?.error) setError(r.error);
-      } catch (e) {
-        rethrowNextNavigation(e);
-        setError("No se pudo abrir el juego.");
+      const r = await startGameAction(fd);
+      if (r?.error) {
+        setError(r.error);
+        return;
       }
+      const sessionId = (r?.payload as { sessionId?: string } | undefined)?.sessionId;
+      if (!sessionId) {
+        setError("No se pudo abrir la partida.");
+        return;
+      }
+      router.push(`/app/games/${sessionId}`);
+      router.refresh();
     });
   }
 

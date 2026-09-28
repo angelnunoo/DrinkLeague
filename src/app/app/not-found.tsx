@@ -8,7 +8,7 @@ export default function AppNotFound() {
       </p>
       <h1 className="font-display text-3xl">Página no encontrada</h1>
       <p className="max-w-sm text-sm text-[var(--muted)]">
-        Esa ruta no existe o ya no está disponible.
+        Esa ruta no existe. Usa el menú inferior.
       </p>
       <Link href="/app/games" className="btn-ghost min-h-12 px-8">
         ← Juegos
