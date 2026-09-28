@@ -1514,3 +1514,198 @@ body {
     font-size: 0.72rem;
   }
 }
+
+
+/* -- Social DrinkLeague Wheel -- */
+.social-wheel-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.social-wheel-stage {
+  position: relative;
+  width: min(100%, 22rem);
+  margin: 0.25rem auto 0.5rem;
+  aspect-ratio: 1;
+}
+
+.social-wheel-aura {
+  position: absolute;
+  inset: -0.5rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(240, 162, 2, 0.28), transparent 55%),
+    radial-gradient(circle at 30% 20%, rgba(124, 92, 255, 0.22), transparent 45%);
+  animation: social-aura 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.social-wheel-ring {
+  position: absolute;
+  inset: 0.2rem;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 213, 106, 0.35);
+  box-shadow:
+    0 0 24px rgba(240, 162, 2, 0.25),
+    inset 0 0 18px rgba(255, 213, 106, 0.12);
+  pointer-events: none;
+  animation: social-ring 4s linear infinite;
+}
+
+.social-wheel-pointer {
+  position: absolute;
+  top: 0.05rem;
+  left: 50%;
+  z-index: 6;
+  width: 0;
+  height: 0;
+  border-left: 0.7rem solid transparent;
+  border-right: 0.7rem solid transparent;
+  border-top: 1.15rem solid var(--amber);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+}
+
+.social-wheel {
+  position: absolute;
+  inset: 0.95rem;
+  border-radius: 50%;
+  border: 6px solid #f0a202;
+  box-shadow:
+    0 0 0 8px #1a1208,
+    0 0 0 10px rgba(255, 213, 106, 0.4),
+    0 20px 48px rgba(0, 0, 0, 0.55),
+    inset 0 0 30px rgba(0, 0, 0, 0.35);
+  will-change: transform;
+}
+
+.social-wheel-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.2rem;
+  margin-left: -1.1rem;
+  margin-top: -42%;
+  text-align: center;
+  transform-origin: 50% 210%;
+  pointer-events: none;
+}
+
+.social-wheel-emoji {
+  display: block;
+  font-size: 1.35rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+
+.social-wheel-hub {
+  position: absolute;
+  inset: 36%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #ffe08a, #f0a202 45%, #a65d00 85%);
+  color: #1a1208;
+  font-size: 1.25rem;
+  font-weight: 800;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.social-wheel-sparks {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-image:
+    radial-gradient(circle at 18% 22%, #ffd56a 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 18%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 70% 72%, #2dd4bf 0 2px, transparent 3px),
+    radial-gradient(circle at 28% 78%, #a78bfa 0 2px, transparent 3px);
+  opacity: 0.55;
+  animation: social-sparks 1.8s ease-in-out infinite alternate;
+}
+
+.social-wheel-spinning .social-wheel-aura {
+  animation-duration: 0.8s;
+}
+
+.social-wheel-spinning .social-wheel-sparks {
+  opacity: 0.9;
+}
+
+.social-result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  animation: bj-win-burst 0.55s ease both;
+}
+
+.rarity-bg-common {
+  background: radial-gradient(420px 280px at 50% 40%, rgba(180, 180, 180, 0.2), rgba(7, 16, 14, 0.94));
+}
+.rarity-bg-rare {
+  background: radial-gradient(420px 280px at 50% 40%, rgba(96, 165, 250, 0.28), rgba(7, 16, 14, 0.94));
+}
+.rarity-bg-epic {
+  background: radial-gradient(420px 280px at 50% 40%, rgba(167, 139, 250, 0.32), rgba(7, 16, 14, 0.94));
+}
+.rarity-bg-legendary {
+  background: radial-gradient(420px 280px at 50% 40%, rgba(240, 162, 2, 0.35), rgba(7, 16, 14, 0.94));
+}
+
+.social-result-emoji {
+  font-size: 5.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
+  animation: pop 0.55s ease both;
+}
+
+.social-result-burst {
+  pointer-events: none;
+  position: absolute;
+  inset: 15%;
+  background-image:
+    radial-gradient(circle at 20% 30%, #f0a202 0 4px, transparent 5px),
+    radial-gradient(circle at 70% 25%, #2dd4bf 0 3px, transparent 4px),
+    radial-gradient(circle at 40% 70%, #fb7185 0 3px, transparent 4px),
+    radial-gradient(circle at 80% 65%, #ffd56a 0 4px, transparent 5px),
+    radial-gradient(circle at 15% 80%, #a78bfa 0 3px, transparent 4px);
+  animation: confetti-fall 1.2s ease-out both;
+  opacity: 0.85;
+}
+
+@keyframes social-aura {
+  0%, 100% { opacity: 0.55; transform: scale(0.98); }
+  50% { opacity: 0.95; transform: scale(1.03); }
+}
+
+@keyframes social-ring {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes social-sparks {
+  from { opacity: 0.35; transform: scale(0.98); }
+  to { opacity: 0.75; transform: scale(1.02); }
+}
+
+@media (max-width: 380px) {
+  .social-wheel-stage {
+    width: min(100%, 18.5rem);
+  }
+  .social-wheel-emoji {
+    font-size: 1.15rem;
+  }
+  .social-result-emoji {
+    font-size: 4.5rem;
+  }
+}
