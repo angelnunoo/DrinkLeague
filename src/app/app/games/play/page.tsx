@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/data";
 import { PeajePlay, ReyPlay, DueloPlay } from "@/components/games/game-boards";
 import { BlackjackPlay } from "@/components/games/blackjack-board";
+import { CarreraPlay, type Horse, type RaceTick } from "@/components/games/horse-race-board";
 import type { SpanishCard } from "@/components/games/spanish-card";
 import type { PokerCard } from "@/components/games/poker-card";
 
@@ -116,7 +117,9 @@ export default async function GamePlayPage({
         ? "game-card-duelo"
         : type === "blackjack"
           ? "game-card-blackjack"
-          : "game-card-peaje";
+          : type === "carrera"
+            ? "game-card-carrera"
+            : "game-card-peaje";
   const title =
     type === "peaje"
       ? "Peaje"
@@ -126,13 +129,15 @@ export default async function GamePlayPage({
           ? "Duelo"
           : type === "blackjack"
             ? "BlackJack"
-            : "Juego";
+            : type === "carrera"
+              ? "Carrera de Caballos"
+              : "Juego";
   const playerNames = players.map((p) => names.get(p.user_id) ?? "?");
   const guest = typeof state.guest_name === "string" ? state.guest_name : null;
   const seat1 = players.find((p) => p.seat === 1)?.user_id;
   const rivalName = seat1 ? (names.get(seat1) ?? "Rival") : guest ?? "Invitado";
 
-  if (!["peaje", "rey", "duelo", "blackjack"].includes(type)) {
+  if (!["peaje", "rey", "duelo", "blackjack", "carrera"].includes(type)) {
     return <MissingGame message="Tipo de juego no válido." />;
   }
 
@@ -157,6 +162,22 @@ export default async function GamePlayPage({
       ) : null}
 
       <div className={`game-card ${shell} !min-h-[24rem] !justify-start gap-4 p-5`}>
+        {type === "carrera" ? (
+          <CarreraPlay
+            sessionId={id}
+            initial={{
+              phase: normalizePhase(session.status, state.phase),
+              stake: state.stake != null ? Number(state.stake) : undefined,
+              pot: state.pot != null ? Number(state.pot) : undefined,
+              track_length: state.track_length != null ? Number(state.track_length) : 20,
+              horses: Array.isArray(state.horses) ? (state.horses as Horse[]) : [],
+              ticks: Array.isArray(state.ticks) ? (state.ticks as RaceTick[]) : [],
+              standings: Array.isArray(state.standings) ? (state.standings as Horse[]) : [],
+              winner: state.winner ? String(state.winner) : undefined,
+            }}
+          />
+        ) : null}
+
         {type === "blackjack" ? (
           <BlackjackPlay
             sessionId={id}
@@ -175,6 +196,8 @@ export default async function GamePlayPage({
               message: state.message ? String(state.message) : undefined,
               xp: state.xp != null ? Number(state.xp) : undefined,
               tokens: state.tokens != null ? Number(state.tokens) : undefined,
+              stake: state.stake != null ? Number(state.stake) : undefined,
+              payout: state.payout != null ? Number(state.payout) : undefined,
             }}
           />
         ) : null}

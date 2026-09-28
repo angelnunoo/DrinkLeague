@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { playBlackjackAction } from "@/app/actions";
+import { playBlackjackAction, startGameAction } from "@/app/actions";
 import { PokerPlayingCard, type PokerCard } from "./poker-card";
 
 export type BlackjackState = {
@@ -17,6 +17,8 @@ export type BlackjackState = {
   message?: string;
   xp?: number;
   tokens?: number;
+  stake?: number;
+  payout?: number;
 };
 
 export function BlackjackPlay({
@@ -36,6 +38,7 @@ export function BlackjackPlay({
   const hideDealer = initial.hide_dealer !== false && !finished;
   const player = initial.player ?? [];
   const dealer = initial.dealer ?? [];
+  const stake = Number(initial.stake ?? 0);
   const playerTotal = initial.player_total ?? 0;
   const dealerTotal = hideDealer
     ? (initial.dealer_shown ?? (dealer[0] ? cardSoftValue(dealer[0]) : 0))
@@ -58,6 +61,30 @@ export function BlackjackPlay({
     });
   }
 
+  function playAgain() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("game_type", "blackjack");
+        fd.set("stake", String(stake || 100));
+        const r = await startGameAction(fd);
+        if (r?.error) {
+          setError(r.error);
+          return;
+        }
+        const nextId = (r?.payload as { sessionId?: string } | undefined)?.sessionId;
+        if (!nextId) {
+          setError("No se pudo abrir la nueva partida.");
+          return;
+        }
+        window.location.assign(`/app/games/play?id=${encodeURIComponent(nextId)}`);
+      } catch {
+        setError("No se pudo iniciar otra partida.");
+      }
+    });
+  }
+
   const result = initial.result;
   const winTone =
     result === "blackjack" || result === "win"
@@ -67,11 +94,17 @@ export function BlackjackPlay({
         : result
           ? "lose"
           : null;
+  const net = Number(initial.tokens ?? 0);
 
   return (
     <div className="bj-table space-y-5" key={animKey}>
+      {stake > 0 ? (
+        <p className="text-center text-xs text-[var(--amber)]">
+          Apuesta · {stake.toLocaleString("es-ES")} ★
+        </p>
+      ) : null}
+
       <div className="bj-felt">
-        {/* Dealer */}
         <div className="bj-hand">
           <div className="bj-hand-meta">
             <p className="bj-hand-label">Dealer</p>
@@ -104,13 +137,16 @@ export function BlackjackPlay({
           <span>VS</span>
         </div>
 
-        {/* Player */}
         <div className="bj-hand">
           <div className="bj-hand-meta">
             <p className="bj-hand-label">Tú</p>
             <p
               className={`bj-score ${
-                playerTotal > 21 ? "text-[var(--danger)]" : playerTotal === 21 ? "text-[var(--amber)]" : ""
+                playerTotal > 21
+                  ? "text-[var(--danger)]"
+                  : playerTotal === 21
+                    ? "text-[var(--amber)]"
+                    : ""
               }`}
             >
               {playerTotal}
@@ -153,7 +189,13 @@ export function BlackjackPlay({
             </div>
             <div className="stat-chip p-3 text-center">
               <p className="text-[10px] text-[var(--muted)]">Fichas</p>
-              <p className="font-display text-2xl text-[var(--amber)]">+{initial.tokens ?? 0}</p>
+              <p
+                className={`font-display text-2xl ${
+                  net > 0 ? "text-[var(--teal)]" : net < 0 ? "text-[var(--danger)]" : "text-[var(--amber)]"
+                }`}
+              >
+                {net > 0 ? `+${net}` : net}
+              </p>
             </div>
           </div>
           <div className="mt-4 flex justify-center gap-6 text-center text-sm">
@@ -165,6 +207,25 @@ export function BlackjackPlay({
               <p className="text-[10px] text-[var(--muted)]">Dealer</p>
               <p className="font-display text-xl">{initial.dealer_total ?? dealerTotal}</p>
             </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={playAgain}
+              className="mega-cta !min-h-14 !text-base"
+            >
+              {pending ? "…" : "🟢 Jugar otra"}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => router.push("/app/games")}
+              className="btn-primary min-h-14 text-base"
+            >
+              🏠 Salir
+            </button>
           </div>
         </div>
       ) : (

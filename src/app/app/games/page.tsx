@@ -14,6 +14,10 @@ type GameStat = {
   best_streak?: number;
   xp_earned?: number;
   tokens_earned?: number;
+  tokens_wagered?: number;
+  tokens_won?: number;
+  tokens_lost?: number;
+  podiums?: number;
   kings_found?: number;
 };
 
@@ -22,6 +26,7 @@ const GAME_LABELS: Record<string, string> = {
   rey: "Rey",
   duelo: "Duelo",
   blackjack: "BlackJack",
+  carrera: "Carrera",
 };
 
 export default async function GamesPage({
@@ -71,16 +76,17 @@ export default async function GamesPage({
   const statsMap = new Map(
     ((gameStats ?? []) as GameStat[]).map((s) => [s.game_type, s]),
   );
+  const tokens = Number(profile.token_balance ?? 0);
 
   return (
     <section className="animate-rise space-y-6">
       <div>
         <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-          Baraja · Casino
+          Casino · Hipódromo
         </p>
         <h1 className="font-display text-3xl">Juegos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Peaje · Rey · Duelo · BlackJack — partidas reales, stats y logros
+          Riesgo y recompensa · {tokens.toLocaleString("es-ES")} ★ disponibles
         </p>
       </div>
 
@@ -90,8 +96,8 @@ export default async function GamesPage({
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {(["peaje", "rey", "duelo", "blackjack"] as const).map((g) => {
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {(["carrera", "blackjack", "peaje", "rey", "duelo"] as const).map((g) => {
           const s = statsMap.get(g);
           return (
             <div key={g} className="surface space-y-2 p-4">
@@ -119,11 +125,14 @@ export default async function GamesPage({
                 </div>
               </div>
               <p className="text-[10px] text-[var(--muted)]">
-                XP {Number(s?.xp_earned ?? 0)} · ★ {Number(s?.tokens_earned ?? 0)}
-                {g === "rey" ? ` · 👑 ${s?.kings_found ?? 0}` : ""}
+                XP {Number(s?.xp_earned ?? 0)}
                 {g === "blackjack"
-                  ? ` · 🃏 ${s?.blackjacks ?? 0} · =${s?.draws ?? 0}`
+                  ? ` · 🃏 ${s?.blackjacks ?? 0} · ★${Number(s?.tokens_won ?? 0)}/−${Number(s?.tokens_lost ?? 0)}`
                   : ""}
+                {g === "carrera"
+                  ? ` · 🏅 ${s?.podiums ?? 0} · ★${Number(s?.tokens_won ?? 0)}/−${Number(s?.tokens_lost ?? 0)}`
+                  : ""}
+                {g === "rey" ? ` · 👑 ${s?.kings_found ?? 0}` : ""}
               </p>
             </div>
           );
@@ -132,9 +141,19 @@ export default async function GamesPage({
 
       <div className="grid gap-4">
         <StartGameForm
+          gameType="carrera"
+          label="Carrera de Caballos"
+          blurb="2–4 jinetes. Apuesta al bote. El primero en meta se lo lleva."
+          friends={friendUsers ?? []}
+          meName={profile.display_name}
+          meId={profile.id}
+          tokenBalance={tokens}
+        />
+        <StartGameForm
           gameType="blackjack"
           label="BlackJack"
-          blurb="Baraja de póker. Pedir o plantarse. El dealer juega solo."
+          blurb="Apuesta fichas. Gana ×2, BlackJack ×2.5, empate recuperas."
+          tokenBalance={tokens}
         />
         <StartGameForm
           gameType="peaje"

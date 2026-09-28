@@ -303,6 +303,62 @@ body {
   border-color: color-mix(in srgb, #22c55e 35%, var(--line));
 }
 
+.game-card-carrera {
+  background:
+    radial-gradient(420px 180px at 20% 0%, rgba(245, 158, 11, 0.35), transparent),
+    radial-gradient(360px 160px at 90% 100%, rgba(56, 189, 248, 0.2), transparent),
+    linear-gradient(165deg, #1c1408, #0b1512 55%, #121a22);
+  border-color: color-mix(in srgb, #f59e0b 40%, var(--line));
+}
+
+.carrera-board {
+  width: 100%;
+}
+
+.carrera-track {
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.03) 12px,
+      transparent 12px,
+      transparent 24px
+    ),
+    linear-gradient(180deg, #16301f, #0d1c14);
+  padding: 1rem 0.85rem;
+}
+
+.carrera-bar {
+  position: relative;
+  height: 1.65rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.carrera-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.carrera-horse {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: left 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+}
+
+.carrera-banner {
+  min-height: 1.75rem;
+}
+
 /* —— BlackJack table —— */
 .bj-table {
   width: 100%;

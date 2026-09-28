@@ -484,7 +484,7 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
   const opponentUserIdRaw = String(formData.get("opponent_user_id") ?? "").trim() || null;
   const opponentName = String(formData.get("opponent_name") ?? "").trim() || null;
 
-  if (!["peaje", "rey", "duelo", "blackjack"].includes(gameType)) {
+  if (!["peaje", "rey", "duelo", "blackjack", "carrera"].includes(gameType)) {
     return { error: "Juego no válido." };
   }
 
@@ -496,6 +496,31 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
     return { error: "Elige un rival o escribe su nombre." };
   }
 
+  const stakeRaw = Number(formData.get("stake") ?? 0);
+  const stake =
+    gameType === "blackjack" || gameType === "carrera"
+      ? [50, 100, 250, 500, 1000].includes(stakeRaw)
+        ? stakeRaw
+        : null
+      : null;
+
+  if ((gameType === "blackjack" || gameType === "carrera") && stake == null) {
+    return { error: "Elige una apuesta válida." };
+  }
+
+  let playersJson: unknown = null;
+  if (gameType === "carrera") {
+    const raw = String(formData.get("players") ?? "[]");
+    try {
+      playersJson = JSON.parse(raw);
+    } catch {
+      return { error: "Participantes no válidos." };
+    }
+    if (!Array.isArray(playersJson) || playersJson.length < 2 || playersJson.length > 4) {
+      return { error: "Selecciona de 2 a 4 caballos." };
+    }
+  }
+
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("start_game", {
@@ -504,6 +529,8 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
       p_party_id: null,
       p_opponent_user_id: opponentUserId,
       p_opponent_name: opponentName,
+      p_stake: stake,
+      p_players: playersJson,
     });
     if (error) return { error: friendlyLeagueError(error.message) || error.message };
     const sessionId = data != null ? String(data).trim() : "";
@@ -632,6 +659,17 @@ export async function playBlackjackAction(
   if (error) return { error: friendlyLeagueError(error.message) || error.message };
   await notifyGameMilestone(sessionId);
   return { success: true };
+}
+
+export async function runCarreraAction(sessionId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("run_carrera", {
+    p_session_id: sessionId,
+  });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  await notifyGameMilestone(sessionId);
+  void Promise.resolve(supabase.rpc("sync_onboarding_progress")).catch(() => undefined);
+  return { success: true, payload: { state: data } };
 }
 
 export async function settleBetMarketAction(formData: FormData): Promise<void> {
