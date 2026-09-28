@@ -174,6 +174,7 @@ export async function joinByCodeAction(formData: FormData): Promise<ActionResult
   });
 
   if (error) return { error: friendlyLeagueError(error.message) };
+  void Promise.resolve(supabase.rpc("sync_onboarding_progress")).catch(() => undefined);
   redirect(`/app/leagues/${data}`);
 }
 
@@ -217,6 +218,7 @@ export async function joinByTokenAction(token: string): Promise<ActionResult> {
   });
 
   if (error) return { error: friendlyLeagueError(error.message) };
+  void Promise.resolve(supabase.rpc("sync_onboarding_progress")).catch(() => undefined);
   redirect(`/app/leagues/${data}`);
 }
 
@@ -247,6 +249,7 @@ export async function logDrinksAction(formData: FormData): Promise<ActionResult>
   void Promise.resolve(supabase.rpc("refresh_legacy_hub", { p_league_id: null })).catch(
     () => undefined,
   );
+  void Promise.resolve(supabase.rpc("sync_onboarding_progress")).catch(() => undefined);
 
   const points = pointsForItems(items);
 
@@ -481,7 +484,7 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
   const opponentUserIdRaw = String(formData.get("opponent_user_id") ?? "").trim() || null;
   const opponentName = String(formData.get("opponent_name") ?? "").trim() || null;
 
-  if (!["peaje", "rey", "duelo"].includes(gameType)) {
+  if (!["peaje", "rey", "duelo", "blackjack"].includes(gameType)) {
     return { error: "Juego no válido." };
   }
 
@@ -505,6 +508,7 @@ export async function startGameAction(formData: FormData): Promise<ActionResult>
     if (error) return { error: friendlyLeagueError(error.message) || error.message };
     const sessionId = data != null ? String(data).trim() : "";
     if (!sessionId) return { error: "No se pudo crear la partida." };
+    void Promise.resolve(supabase.rpc("sync_onboarding_progress")).catch(() => undefined);
     return {
       success: true,
       message: "Partida creada",
@@ -567,6 +571,19 @@ async function notifyGameMilestone(sessionId: string) {
       });
     }
   }
+  if (session.game_type === "blackjack" && session.status === "finished") {
+    const result = String(state.result ?? "");
+    if (result === "blackjack") {
+      await supabase.rpc("notify_user", {
+        p_user_id: user.id,
+        p_category: "games",
+        p_title: "🃏 ¡BlackJack!",
+        p_body: "21 natural. El casino te saluda.",
+        p_href: `/app/games/play?id=${sessionId}`,
+        p_payload: { session_id: sessionId, result },
+      });
+    }
+  }
 }
 
 export async function playDueloAction(sessionId: string): Promise<ActionResult> {
@@ -603,6 +620,20 @@ export async function playPeajeStepAction(
   return { success: true };
 }
 
+export async function playBlackjackAction(
+  sessionId: string,
+  action: "hit" | "stand",
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("play_blackjack", {
+    p_session_id: sessionId,
+    p_action: action,
+  });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  await notifyGameMilestone(sessionId);
+  return { success: true };
+}
+
 export async function settleBetMarketAction(formData: FormData): Promise<void> {
   const marketId = String(formData.get("market_id") ?? "");
   const selectionId = String(formData.get("winning_selection_id") ?? "");
@@ -630,6 +661,7 @@ export async function sendFriendRequestAction(formData: FormData): Promise<Actio
   const supabase = await createClient();
   const { error } = await supabase.rpc("send_friend_request", { p_friend_code: code });
   if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  await supabase.rpc("sync_onboarding_progress");
   return { success: true, message: "Solicitud enviada." };
 }
 
@@ -643,7 +675,35 @@ export async function respondFriendRequestAction(
     p_accept: accept,
   });
   if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  await supabase.rpc("sync_onboarding_progress");
   redirect("/app/social");
+}
+
+export async function removeFriendAction(friendUserId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remove_friend", {
+    p_friend_user_id: friendUserId,
+  });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  redirect("/app/social");
+}
+
+export async function searchUsersAction(query: string): Promise<ActionResult> {
+  const q = query.trim();
+  if (q.length < 2) return { error: "Escribe al menos 2 caracteres." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("search_users", {
+    p_query: q,
+    p_limit: 12,
+  });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  return { success: true, payload: { users: data ?? [] } };
+}
+
+export async function dismissOnboardingAction(): Promise<void> {
+  const supabase = await createClient();
+  await supabase.rpc("dismiss_onboarding");
+  redirect("/app");
 }
 
 export async function createChallengeAction(formData: FormData): Promise<ActionResult> {

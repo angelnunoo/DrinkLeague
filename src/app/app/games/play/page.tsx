@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/data";
 import { PeajePlay, ReyPlay, DueloPlay } from "@/components/games/game-boards";
+import { BlackjackPlay } from "@/components/games/blackjack-board";
 import type { SpanishCard } from "@/components/games/spanish-card";
+import type { PokerCard } from "@/components/games/poker-card";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,6 @@ async function loadSession(id: string): Promise<{
 }> {
   const supabase = await createClient();
 
-  // Prefer SECURITY DEFINER RPC if available; fall back to table select
   const rpc = await supabase.rpc("get_my_game_session", {
     p_session_id: id,
   });
@@ -78,6 +79,14 @@ function normalizePhase(status: string, raw: unknown): string {
   return p;
 }
 
+function asPokerHand(raw: unknown): PokerCard[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (c): c is PokerCard =>
+      !!c && typeof c === "object" && typeof (c as PokerCard).rank === "number",
+  );
+}
+
 export default async function GamePlayPage({
   searchParams,
 }: {
@@ -89,9 +98,7 @@ export default async function GamePlayPage({
   if (!profile) redirect("/login");
 
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
-    return (
-      <MissingGame message="No hay partida seleccionada." />
-    );
+    return <MissingGame message="No hay partida seleccionada." />;
   }
 
   const { session, players, names } = await loadSession(id);
@@ -103,14 +110,29 @@ export default async function GamePlayPage({
   const state = (session.state ?? {}) as Record<string, unknown>;
   const type = session.game_type;
   const shell =
-    type === "rey" ? "game-card-rey" : type === "duelo" ? "game-card-duelo" : "game-card-peaje";
-  const title = type === "peaje" ? "Peaje" : type === "rey" ? "Rey" : "Duelo";
+    type === "rey"
+      ? "game-card-rey"
+      : type === "duelo"
+        ? "game-card-duelo"
+        : type === "blackjack"
+          ? "game-card-blackjack"
+          : "game-card-peaje";
+  const title =
+    type === "peaje"
+      ? "Peaje"
+      : type === "rey"
+        ? "Rey"
+        : type === "duelo"
+          ? "Duelo"
+          : type === "blackjack"
+            ? "BlackJack"
+            : "Juego";
   const playerNames = players.map((p) => names.get(p.user_id) ?? "?");
   const guest = typeof state.guest_name === "string" ? state.guest_name : null;
   const seat1 = players.find((p) => p.seat === 1)?.user_id;
   const rivalName = seat1 ? (names.get(seat1) ?? "Rival") : guest ?? "Invitado";
 
-  if (!["peaje", "rey", "duelo"].includes(type)) {
+  if (!["peaje", "rey", "duelo", "blackjack"].includes(type)) {
     return <MissingGame message="Tipo de juego no válido." />;
   }
 
@@ -135,6 +157,28 @@ export default async function GamePlayPage({
       ) : null}
 
       <div className={`game-card ${shell} !min-h-[24rem] !justify-start gap-4 p-5`}>
+        {type === "blackjack" ? (
+          <BlackjackPlay
+            sessionId={id}
+            initial={{
+              phase: normalizePhase(session.status, state.phase === "intro" ? "player" : state.phase),
+              player: asPokerHand(state.player),
+              dealer: asPokerHand(state.dealer),
+              player_total:
+                state.player_total != null ? Number(state.player_total) : undefined,
+              dealer_total:
+                state.dealer_total != null ? Number(state.dealer_total) : undefined,
+              dealer_shown:
+                state.dealer_shown != null ? Number(state.dealer_shown) : undefined,
+              hide_dealer: state.hide_dealer !== false && session.status !== "finished",
+              result: state.result ? String(state.result) : undefined,
+              message: state.message ? String(state.message) : undefined,
+              xp: state.xp != null ? Number(state.xp) : undefined,
+              tokens: state.tokens != null ? Number(state.tokens) : undefined,
+            }}
+          />
+        ) : null}
+
         {type === "peaje" ? (
           <PeajePlay
             sessionId={id}

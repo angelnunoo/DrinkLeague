@@ -47,6 +47,8 @@ export type Profile = {
   equipped_cosmetics?: Record<string, string> | null;
   equipped_title_code?: string | null;
   prestige_level?: number | null;
+  onboarding_completed_at?: string | null;
+  onboarding_dismissed_at?: string | null;
 };
 
 export type ShopItem = {

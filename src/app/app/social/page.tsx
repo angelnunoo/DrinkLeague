@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { getCurrentProfile, getMyLeagues } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { FriendActions } from "@/components/friend-actions";
+import { FriendSearch, RemoveFriendButton } from "@/components/friend-search";
 import { LeagueInviteShare } from "@/components/league-invite-share";
 import { FriendInviteShare } from "@/components/friend-invite-share";
 import { formatFriendInviteLink, formatInviteLink } from "@/lib/domain";
@@ -159,6 +160,8 @@ export default async function SocialPage({
         </p>
       </div>
 
+      <FriendSearch />
+
       <FriendActions />
 
       <div className="surface p-5">
@@ -206,12 +209,20 @@ export default async function SocialPage({
                 <li key={f.id} className="border-b border-[var(--line)] pb-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold">{u?.display_name ?? "Amigo"}</p>
+                      <Link
+                        href={`/app/u/${encodeURIComponent(u?.friend_code || otherId)}`}
+                        className="font-semibold hover:underline"
+                      >
+                        {u?.display_name ?? "Amigo"}
+                      </Link>
                       <p className="text-xs text-[var(--muted)]">
                         {chemTier(score)} · {f.shared_activities ?? 0} actividades
                       </p>
                     </div>
-                    <span className="font-display text-xl text-[var(--amber)]">{score}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-display text-xl text-[var(--amber)]">{score}</span>
+                      <RemoveFriendButton friendUserId={otherId} />
+                    </div>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--line)]">
                     <div

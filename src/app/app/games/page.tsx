@@ -4,6 +4,26 @@ import { getCurrentProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { StartGameForm } from "@/components/start-game-form";
 
+type GameStat = {
+  game_type: string;
+  played?: number;
+  won?: number;
+  lost?: number;
+  draws?: number;
+  blackjacks?: number;
+  best_streak?: number;
+  xp_earned?: number;
+  tokens_earned?: number;
+  kings_found?: number;
+};
+
+const GAME_LABELS: Record<string, string> = {
+  peaje: "Peaje",
+  rey: "Rey",
+  duelo: "Duelo",
+  blackjack: "BlackJack",
+};
+
 export default async function GamesPage({
   searchParams,
 }: {
@@ -48,17 +68,19 @@ export default async function GamesPage({
         .order("display_name")
     : { data: [] };
 
-  const statsMap = new Map((gameStats ?? []).map((s) => [s.game_type, s]));
+  const statsMap = new Map(
+    ((gameStats ?? []) as GameStat[]).map((s) => [s.game_type, s]),
+  );
 
   return (
     <section className="animate-rise space-y-6">
       <div>
         <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-          Baraja española
+          Baraja · Casino
         </p>
         <h1 className="font-display text-3xl">Juegos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Peaje · Rey · Duelo — partidas reales, stats y logros
+          Peaje · Rey · Duelo · BlackJack — partidas reales, stats y logros
         </p>
       </div>
 
@@ -68,13 +90,13 @@ export default async function GamesPage({
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {(["peaje", "rey", "duelo"] as const).map((g) => {
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {(["peaje", "rey", "duelo", "blackjack"] as const).map((g) => {
           const s = statsMap.get(g);
           return (
             <div key={g} className="surface space-y-2 p-4">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--muted)] capitalize">
-                {g}
+              <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                {GAME_LABELS[g] ?? g}
               </p>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div>
@@ -99,6 +121,9 @@ export default async function GamesPage({
               <p className="text-[10px] text-[var(--muted)]">
                 XP {Number(s?.xp_earned ?? 0)} · ★ {Number(s?.tokens_earned ?? 0)}
                 {g === "rey" ? ` · 👑 ${s?.kings_found ?? 0}` : ""}
+                {g === "blackjack"
+                  ? ` · 🃏 ${s?.blackjacks ?? 0} · =${s?.draws ?? 0}`
+                  : ""}
               </p>
             </div>
           );
@@ -106,6 +131,11 @@ export default async function GamesPage({
       </div>
 
       <div className="grid gap-4">
+        <StartGameForm
+          gameType="blackjack"
+          label="BlackJack"
+          blurb="Baraja de póker. Pedir o plantarse. El dealer juega solo."
+        />
         <StartGameForm
           gameType="peaje"
           label="Peaje"
@@ -134,7 +164,9 @@ export default async function GamesPage({
                 href={`/app/games/play?id=${encodeURIComponent(g.id)}`}
                 className="rank-row flex min-h-12 items-center justify-between px-4 py-3 transition hover:border-[var(--teal)]"
               >
-                <span className="font-semibold capitalize">{g.game_type}</span>
+                <span className="font-semibold">
+                  {GAME_LABELS[g.game_type] ?? g.game_type}
+                </span>
                 <span className="text-xs text-[var(--muted)]">
                   {g.status === "finished" ? "Terminada" : "En curso"} ·{" "}
                   {new Date(g.created_at).toLocaleDateString("es-ES")}

@@ -8,6 +8,7 @@ import { XpBar } from "@/components/ui/xp-bar";
 import { ensureWeeklyMarketAction } from "@/app/actions";
 import { RivalCard } from "@/components/ui/rival-card";
 import { StreakStrip } from "@/components/ui/streak-strip";
+import { OnboardingCard, type OnboardingMission } from "@/components/onboarding-card";
 
 export default async function AppHomePage() {
   const [profile, leagues] = await Promise.all([getCurrentProfile(), getMyLeagues()]);
@@ -24,6 +25,9 @@ export default async function AppHomePage() {
   const { flushRecentPushes } = await import("@/lib/notifications");
   void flushRecentPushes(profile.id).catch(() => undefined);
 
+  const showOnboarding =
+    !profile.onboarding_completed_at && !profile.onboarding_dismissed_at;
+
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 14);
 
@@ -34,6 +38,7 @@ export default async function AppHomePage() {
     leaderboard,
     { data: streakRows },
     { data: rivalRow },
+    onboardingRes,
   ] = await Promise.all([
     supabase
       .from("app_opens")
@@ -72,6 +77,9 @@ export default async function AppHomePage() {
           .eq("league_id", primaryLeague.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    showOnboarding
+      ? supabase.rpc("sync_onboarding_progress")
+      : Promise.resolve({ data: null }),
   ]);
 
   const streak = computeStreak((opens ?? []).map((o) => o.day));
@@ -101,9 +109,24 @@ export default async function AppHomePage() {
   }
 
   const weeklyChallenge = (challenges ?? [])[0];
+  const onboarding = (onboardingRes?.data ?? null) as {
+    done?: number;
+    total?: number;
+    missions?: OnboardingMission[];
+    completed?: boolean;
+  } | null;
 
   return (
     <section className="animate-rise space-y-6 pb-6">
+      {showOnboarding && onboarding && !onboarding.completed ? (
+        <OnboardingCard
+          missions={onboarding.missions ?? []}
+          done={Number(onboarding.done ?? 0)}
+          total={Number(onboarding.total ?? 4)}
+          compact
+        />
+      ) : null}
+
       {/* Hero status */}
       <div className="home-hero">
         <div className="flex items-start justify-between gap-3">
@@ -290,10 +313,11 @@ export default async function AppHomePage() {
           { href: "/app/bets", title: "DrinkBets", sub: "Apuestas vivas" },
           { href: "/app/achievements", title: "Logros", sub: "Secretos" },
           { href: "/app/album", title: "Álbum", sub: "Temporadas" },
-          { href: "/app/activity", title: "Actividad", sub: "Notificaciones" },
+          { href: "/app/activity", title: "Actividad", sub: "Feed social" },
           { href: "/app/museum", title: "Museo", sub: "Récords" },
           { href: "/app/stats", title: "Stats", sub: "Gráficos" },
-          { href: "/app/social", title: "Social", sub: "Química" },
+          { href: "/app/social", title: "Social", sub: "Amigos" },
+          { href: "/app/legacy", title: "Legado", sub: "Historia" },
           { href: "/app/drinks", title: "Bebidas", sub: "Historial" },
           { href: "/app/profile", title: "Perfil", sub: "Vitrina" },
         ].map((t) => (

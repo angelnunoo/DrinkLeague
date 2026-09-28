@@ -350,6 +350,9 @@ export default async function ProfilePage({
               <Link href="/app/social" className="btn-ghost min-h-12 w-full text-sm">
                 Ir a Social
               </Link>
+              <Link href="/app/legacy" className="btn-primary min-h-12 w-full text-sm">
+                📜 Ver Legado
+              </Link>
             </div>
           ),
           bets: (

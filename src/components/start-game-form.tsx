@@ -7,6 +7,7 @@ const ART: Record<string, { emoji: string; className: string; tag: string }> = {
   peaje: { emoji: "🚧", className: "game-card-peaje", tag: "Suerte" },
   rey: { emoji: "👑", className: "game-card-rey", tag: "Baraja española" },
   duelo: { emoji: "⚔️", className: "game-card-duelo", tag: "1 vs 1" },
+  blackjack: { emoji: "🃏", className: "game-card-blackjack", tag: "Casino" },
 };
 
 const RULES: Record<string, string[]> = {
@@ -27,6 +28,12 @@ const RULES: Record<string, string[]> = {
     "Una carta española a cada uno",
     "La más alta gana · la baja bebe",
     "Empate → desempate automático",
+  ],
+  blackjack: [
+    "Baraja de póker clásica · A–K · ♠♥♦♣",
+    "Pedir Carta o Plantarse",
+    "Dealer se planta en 17",
+    "BlackJack natural = 21 con 2 cartas",
   ],
 };
 
@@ -49,7 +56,7 @@ export function StartGameForm({
   compact,
   friends,
 }: {
-  gameType: "peaje" | "rey" | "duelo";
+  gameType: "peaje" | "rey" | "duelo" | "blackjack";
   label: string;
   blurb?: string;
   needsOpponent?: boolean;

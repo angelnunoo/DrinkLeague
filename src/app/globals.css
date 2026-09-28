@@ -295,6 +295,274 @@ body {
     linear-gradient(160deg, #2a1520, #0b1512);
 }
 
+.game-card-blackjack {
+  background:
+    radial-gradient(420px 200px at 80% 0%, rgba(34, 197, 94, 0.28), transparent),
+    radial-gradient(380px 160px at 10% 100%, rgba(240, 162, 2, 0.22), transparent),
+    linear-gradient(165deg, #0f2a1f, #07140f 55%, #0a1a14);
+  border-color: color-mix(in srgb, #22c55e 35%, var(--line));
+}
+
+/* —— BlackJack table —— */
+.bj-table {
+  width: 100%;
+}
+
+.bj-felt {
+  position: relative;
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in srgb, #22c55e 40%, transparent);
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 40%, rgba(22, 101, 52, 0.55), transparent 70%),
+    linear-gradient(180deg, #14532d 0%, #0a1f14 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.04),
+    0 20px 50px rgba(0, 0, 0, 0.35);
+  padding: 1.1rem 0.85rem 1.25rem;
+  overflow: hidden;
+}
+
+.bj-felt::before {
+  content: "";
+  position: absolute;
+  inset: 10%;
+  border: 1px dashed color-mix(in srgb, #86efac 25%, transparent);
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.bj-hand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.bj-hand-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.bj-hand-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #bbf7d0 80%, white);
+}
+
+.bj-score {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #fefce8;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  min-width: 2rem;
+  text-align: center;
+}
+
+.bj-score-dim {
+  opacity: 0.72;
+}
+
+.bj-cards {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 9rem;
+  padding-inline: 0.5rem;
+}
+
+.bj-card-slot {
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.bj-card-slot:hover {
+  transform: translateY(-4px);
+}
+
+.bj-vs {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  margin: 0.65rem 0;
+}
+
+.bj-vs span {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 0.75rem;
+  letter-spacing: 0.28em;
+  color: color-mix(in srgb, #86efac 55%, transparent);
+  border: 1px solid color-mix(in srgb, #86efac 30%, transparent);
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.bj-result {
+  text-align: center;
+  border-radius: 1.35rem;
+  border: 1px solid var(--line);
+  padding: 1.25rem 1rem;
+  animation: bj-win-burst 0.7s ease both;
+}
+
+.bj-result-win,
+.bj-result-blackjack {
+  border-color: color-mix(in srgb, var(--amber) 55%, transparent);
+  background:
+    radial-gradient(280px 120px at 50% 0%, rgba(240, 162, 2, 0.35), transparent),
+    rgba(12, 24, 20, 0.85);
+}
+
+.bj-result-lose {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background:
+    radial-gradient(280px 120px at 50% 0%, rgba(251, 113, 133, 0.28), transparent),
+    rgba(12, 24, 20, 0.85);
+}
+
+.bj-result-push {
+  border-color: color-mix(in srgb, var(--teal) 40%, transparent);
+  background:
+    radial-gradient(280px 120px at 50% 0%, rgba(45, 212, 191, 0.22), transparent),
+    rgba(12, 24, 20, 0.85);
+}
+
+.bj-result-emoji {
+  font-size: 2.75rem;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+  animation: pop 0.55s ease both;
+}
+
+.poker-card {
+  max-width: none;
+  margin-inline: 0;
+  border-radius: 0.85rem;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.4),
+    0 2px 0 rgba(255, 255, 255, 0.12) inset;
+}
+
+.poker-card-face {
+  background:
+    linear-gradient(165deg, #fffef9 0%, #f5f0e6 50%, #ebe4d6 100%);
+}
+
+.poker-card-back {
+  background:
+    repeating-linear-gradient(
+      -32deg,
+      #0f2a1f,
+      #0f2a1f 6px,
+      #163528 6px,
+      #163528 12px
+    );
+  border-color: #22c55e;
+}
+
+.poker-back-inner {
+  border-color: color-mix(in srgb, #86efac 45%, transparent);
+}
+
+.poker-rank {
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.poker-figure-art {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.poker-figure-suit {
+  margin-top: 0.15rem;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.poker-pips {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 4.5rem;
+}
+
+.poker-pips .pip {
+  position: absolute;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+
+.poker-pips .pip-c { top: 50%; left: 50%; font-size: 1.35rem; }
+.poker-pips .pip-t { top: 14%; left: 50%; }
+.poker-pips .pip-b { top: 86%; left: 50%; }
+.poker-pips .pip-tl { top: 14%; left: 28%; }
+.poker-pips .pip-tr { top: 14%; left: 72%; }
+.poker-pips .pip-bl { top: 86%; left: 28%; }
+.poker-pips .pip-br { top: 86%; left: 72%; }
+.poker-pips .pip-ml { top: 50%; left: 28%; }
+.poker-pips .pip-mr { top: 50%; left: 72%; }
+.poker-pips .pip-mtl { top: 32%; left: 28%; }
+.poker-pips .pip-mtr { top: 32%; left: 72%; }
+.poker-pips .pip-mbl { top: 68%; left: 28%; }
+.poker-pips .pip-mbr { top: 68%; left: 72%; }
+
+.bj-deal {
+  animation: bj-deal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bj-flip {
+  animation: bj-flip 0.65s ease both;
+}
+
+@keyframes bj-deal {
+  from {
+    opacity: 0;
+    transform: translateY(-28px) translateX(36px) rotate(-12deg) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0) scale(1);
+  }
+}
+
+@keyframes bj-flip {
+  0% {
+    transform: rotateY(90deg) scale(0.94);
+    opacity: 0.4;
+  }
+  100% {
+    transform: rotateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bj-win-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .playing-card {
   position: relative;
   aspect-ratio: 2 / 3;
