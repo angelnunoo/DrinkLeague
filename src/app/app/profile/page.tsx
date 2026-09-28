@@ -12,6 +12,7 @@ import { xpProgress } from "@/lib/domain";
 import { XpBar } from "@/components/ui/xp-bar";
 import { StreakStrip } from "@/components/ui/streak-strip";
 import { PrestigeButton } from "@/components/prestige-button";
+import { ProfileTabs } from "@/components/profile-tabs";
 
 function initials(name: string) {
   return name
@@ -191,134 +192,196 @@ export default async function ProfilePage({
       ) : null}
 
       {/* Season summary */}
-      <div className="surface p-4">
+      <div className="surface p-5">
         <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
           Resumen de temporada
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="stat-chip">
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="stat-chip p-3">
             <p className="text-xs text-[var(--muted)]">Registros</p>
             <p className="font-display text-2xl">{stats?.total_logs ?? 0}</p>
           </div>
-          <div className="stat-chip">
+          <div className="stat-chip p-3">
             <p className="text-xs text-[var(--muted)]">Logros</p>
             <p className="font-display text-2xl">{achievements?.length ?? 0}</p>
           </div>
-          <div className="stat-chip">
+          <div className="stat-chip p-3">
             <p className="text-xs text-[var(--muted)]">Trofeos</p>
             <p className="font-display text-2xl">{trophies?.length ?? 0}</p>
           </div>
-          <div className="stat-chip">
+          <div className="stat-chip p-3">
             <p className="text-xs text-[var(--muted)]">Títulos</p>
             <p className="font-display text-2xl">{titles?.length ?? 0}</p>
           </div>
         </div>
-        <Link href="/app/battle-pass" className="btn-ghost mt-3 w-full text-sm">
+        <Link href="/app/battle-pass" className="btn-ghost mt-4 min-h-12 w-full text-sm">
           Ver pase de temporada →
         </Link>
       </div>
 
-      {/* Featured trophies */}
-      <div className="surface p-4">
-        <h2 className="font-display text-xl">Trofeos destacados</h2>
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {Array.from({ length: 8 }).map((_, i) => {
-            const slot = i + 1;
-            const tid = showMap.get(slot);
-            const trophy = (trophies ?? []).find((t) => t.id === tid);
-            const def = trophy?.trophy_definitions as unknown as {
-              name: string;
-              icon: string;
-            } | null;
-            return (
-              <div
-                key={slot}
-                className="flex aspect-square flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[rgba(7,16,14,0.55)] p-1.5 text-center"
-              >
-                <span className="text-2xl">{def?.icon ?? "◇"}</span>
-                <span className="mt-1 line-clamp-2 text-[9px] text-[var(--muted)]">
-                  {def?.name ?? `Slot ${slot}`}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        {(trophies ?? []).length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {(trophies ?? []).slice(0, 8).map((t) => {
-              const def = t.trophy_definitions as unknown as { name: string; icon: string } | null;
-              return (
-                <form key={t.id} action={setTrophyShowcaseAction.bind(null, 1, t.id)}>
-                  <button type="submit" className="btn-ghost px-2 py-1 text-[10px]">
-                    {def?.icon} →1
-                  </button>
-                </form>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-[var(--muted)]">Gana guerras y MVPs para llenar la vitrina.</p>
-        )}
-      </div>
-
-      {/* Achievements highlight */}
-      <div className="surface p-4">
-        <h2 className="font-display text-xl">Logros destacados</h2>
-        <div className="mt-3 grid gap-2">
-          {(achievements ?? []).slice(0, 4).map((a) => {
-            const def = a.achievement_definitions as unknown as {
-              name: string;
-              description: string;
-            } | null;
-            return (
-              <div key={`${a.achievement_code}-${a.unlocked_at}`} className="stat-chip">
-                <p className="font-semibold">{def?.name ?? a.achievement_code}</p>
-                <p className="text-xs text-[var(--muted)]">{def?.description}</p>
-              </div>
-            );
-          })}
-          {!achievements?.length ? (
-            <p className="text-sm text-[var(--muted)]">Sigue registrando para desbloquear logros.</p>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Chemistry */}
-      <div className="surface p-4">
-        <h2 className="font-display text-xl">Química destacada</h2>
-        <ul className="mt-3 space-y-2">
-          {(chemistry ?? []).map((c) => {
-            const other = c.user_a === profile.id ? c.user_b : c.user_a;
-            return (
-              <li key={`${c.user_a}-${c.user_b}`} className="rank-row flex items-center gap-3 px-3 py-2.5">
-                <div className="avatar-ring flex h-9 w-9 items-center justify-center text-xs font-bold">
-                  {initials(fname.get(other) ?? "?")}
+      <ProfileTabs
+        panels={{
+          stats: (
+            <div className="surface space-y-4 p-5">
+              <h2 className="font-display text-xl">Estadísticas</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="stat-chip p-3">
+                  <p className="text-xs text-[var(--muted)]">Puntos totales</p>
+                  <p className="font-display text-2xl text-[var(--amber)]">
+                    {stats?.total_points ?? 0}
+                  </p>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{fname.get(other) ?? "Amigo"}</p>
-                  <p className="text-[10px] text-[var(--muted)]">Nivel {c.chemistry_level}</p>
+                <div className="stat-chip p-3">
+                  <p className="text-xs text-[var(--muted)]">Consumiciones</p>
+                  <p className="font-display text-2xl">{stats?.total_logs ?? 0}</p>
                 </div>
-                <span className="font-display text-xl text-[var(--teal)]">
-                  {Math.round(Number(c.chemistry_score))}%
-                </span>
-              </li>
-            );
-          })}
-          {!chemistry?.length ? (
-            <li className="text-sm text-[var(--muted)]">
-              Añade amigos en Social para construir química.
-            </li>
-          ) : null}
-        </ul>
-        <Link href="/app/social" className="btn-ghost mt-3 w-full text-sm">
-          Ir a Social
-        </Link>
-      </div>
+              </div>
+              <Link href="/app/stats" className="btn-ghost min-h-12 w-full text-sm">
+                Ver gráficos →
+              </Link>
+              <Link href="/app/drinks" className="btn-ghost min-h-12 w-full text-sm">
+                🍺 Mis consumiciones
+              </Link>
+            </div>
+          ),
+          trophies: (
+            <div className="surface space-y-4 p-5">
+              <h2 className="font-display text-xl">Trofeos</h2>
+              <div className="grid grid-cols-4 gap-2">
+                {Array.from({ length: 8 }).map((_, i) => {
+                  const slot = i + 1;
+                  const tid = showMap.get(slot);
+                  const trophy = (trophies ?? []).find((t) => t.id === tid);
+                  const def = trophy?.trophy_definitions as unknown as {
+                    name: string;
+                    icon: string;
+                  } | null;
+                  return (
+                    <div
+                      key={slot}
+                      className="flex aspect-square flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[rgba(7,16,14,0.55)] p-1.5 text-center"
+                    >
+                      <span className="text-2xl">{def?.icon ?? "◇"}</span>
+                      <span className="mt-1 line-clamp-2 text-[9px] text-[var(--muted)]">
+                        {def?.name ?? `Slot ${slot}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {(trophies ?? []).length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {(trophies ?? []).slice(0, 8).map((t) => {
+                    const def = t.trophy_definitions as unknown as {
+                      name: string;
+                      icon: string;
+                    } | null;
+                    return (
+                      <form key={t.id} action={setTrophyShowcaseAction.bind(null, 1, t.id)}>
+                        <button type="submit" className="btn-ghost min-h-10 px-2 py-1 text-[10px]">
+                          {def?.icon} →1
+                        </button>
+                      </form>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--muted)]">
+                  Gana guerras y MVPs para llenar la vitrina.
+                </p>
+              )}
+            </div>
+          ),
+          achievements: (
+            <div className="surface space-y-3 p-5">
+              <h2 className="font-display text-xl">Logros</h2>
+              {(achievements ?? []).slice(0, 8).map((a) => {
+                const def = a.achievement_definitions as unknown as {
+                  name: string;
+                  description: string;
+                } | null;
+                return (
+                  <div key={`${a.achievement_code}-${a.unlocked_at}`} className="stat-chip p-3">
+                    <p className="font-semibold">{def?.name ?? a.achievement_code}</p>
+                    <p className="text-xs text-[var(--muted)]">{def?.description}</p>
+                  </div>
+                );
+              })}
+              {!achievements?.length ? (
+                <p className="text-sm text-[var(--muted)]">
+                  Sigue registrando para desbloquear logros.
+                </p>
+              ) : null}
+              <Link href="/app/achievements" className="btn-ghost min-h-12 w-full text-sm">
+                Ver todos →
+              </Link>
+            </div>
+          ),
+          chemistry: (
+            <div className="surface space-y-3 p-5">
+              <h2 className="font-display text-xl">Química</h2>
+              <ul className="space-y-2">
+                {(chemistry ?? []).map((c) => {
+                  const other = c.user_a === profile.id ? c.user_b : c.user_a;
+                  return (
+                    <li
+                      key={`${c.user_a}-${c.user_b}`}
+                      className="rank-row flex items-center gap-3 px-3 py-3"
+                    >
+                      <div className="avatar-ring flex h-10 w-10 items-center justify-center text-xs font-bold">
+                        {initials(fname.get(other) ?? "?")}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">{fname.get(other) ?? "Amigo"}</p>
+                        <p className="text-[10px] text-[var(--muted)]">Nivel {c.chemistry_level}</p>
+                      </div>
+                      <span className="font-display text-xl text-[var(--teal)]">
+                        {Math.round(Number(c.chemistry_score))}%
+                      </span>
+                    </li>
+                  );
+                })}
+                {!chemistry?.length ? (
+                  <li className="text-sm text-[var(--muted)]">
+                    Añade amigos en Social para construir química.
+                  </li>
+                ) : null}
+              </ul>
+              <Link href="/app/social" className="btn-ghost min-h-12 w-full text-sm">
+                Ir a Social
+              </Link>
+            </div>
+          ),
+          bets: (
+            <div className="surface space-y-3 p-5 text-center">
+              <h2 className="font-display text-xl">Apuestas</h2>
+              <p className="text-sm text-[var(--muted)]">
+                Mercados, SuperAumentos y fichas en DrinkBets.
+              </p>
+              <Link href="/app/bets" className="btn-primary min-h-12 w-full">
+                Abrir DrinkBets
+              </Link>
+              <Link href="/app/shop" className="btn-ghost min-h-12 w-full">
+                Tienda de fichas
+              </Link>
+            </div>
+          ),
+          games: (
+            <div className="surface space-y-3 p-5 text-center">
+              <h2 className="font-display text-xl">Juegos</h2>
+              <p className="text-sm text-[var(--muted)]">Peaje, Rey y Duelo.</p>
+              <Link href="/app/games" className="btn-primary min-h-12 w-full">
+                Jugar ahora
+              </Link>
+            </div>
+          ),
+        }}
+      />
 
       {/* Titles */}
-      <div className="surface p-4">
+      <div className="surface space-y-3 p-5">
         <h2 className="font-display text-xl">Títulos</h2>
-        <ul className="mt-3 space-y-2">
+        <ul className="space-y-2">
           {(titles ?? []).map((t) => {
             const def = t.title_definitions as unknown as {
               name: string;
@@ -327,7 +390,10 @@ export default async function ProfilePage({
             } | null;
             const equipped = profile.equipped_title_code === t.title_code;
             return (
-              <li key={t.title_code} className="rank-row flex items-center justify-between gap-2 px-3 py-2.5">
+              <li
+                key={t.title_code}
+                className="rank-row flex items-center justify-between gap-2 px-3 py-3"
+              >
                 <div>
                   <p className="font-semibold">
                     {def?.emoji} {def?.name ?? t.title_code}
@@ -338,7 +404,7 @@ export default async function ProfilePage({
                   <span className="text-xs text-[var(--teal)]">Equipado</span>
                 ) : (
                   <form action={equipTitleAction.bind(null, t.title_code)}>
-                    <button type="submit" className="btn-ghost text-xs">
+                    <button type="submit" className="btn-ghost min-h-10 text-xs">
                       Equipar
                     </button>
                   </form>
@@ -349,16 +415,16 @@ export default async function ProfilePage({
         </ul>
       </div>
 
-      <div className="surface p-4">
+      <div className="surface space-y-3 p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl">Personalidad</h2>
           <form action={refreshPersonalitiesAction}>
-            <button type="submit" className="btn-ghost text-xs">
+            <button type="submit" className="btn-ghost min-h-10 text-xs">
               Recalcular
             </button>
           </form>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           {(personalities ?? []).map((p) => {
             const def = p.personality_definitions as unknown as {
               name: string;
@@ -381,16 +447,16 @@ export default async function ProfilePage({
       <ProfileEditor profile={profile} />
 
       <div className="grid grid-cols-2 gap-3">
-        <Link href="/app/stats" className="surface p-4 text-center">
+        <Link href="/app/stats" className="surface min-h-16 p-4 text-center">
           <p className="font-display text-lg">Estadísticas</p>
         </Link>
-        <Link href="/app/achievements" className="surface p-4 text-center">
+        <Link href="/app/achievements" className="surface min-h-16 p-4 text-center">
           <p className="font-display text-lg">Logros</p>
         </Link>
-        <Link href="/app/album" className="surface p-4 text-center">
+        <Link href="/app/album" className="surface min-h-16 p-4 text-center">
           <p className="font-display text-lg">Álbum</p>
         </Link>
-        <Link href="/app/museum" className="surface p-4 text-center">
+        <Link href="/app/museum" className="surface min-h-16 p-4 text-center">
           <p className="font-display text-lg">Museo</p>
         </Link>
       </div>

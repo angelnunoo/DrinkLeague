@@ -65,7 +65,8 @@ body {
   border-radius: 999px;
   background: var(--amber);
   color: #14110a;
-  padding: 0.85rem 1.4rem;
+  padding: 0.95rem 1.5rem;
+  min-height: 3rem;
   font-weight: 700;
   transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
 }
@@ -91,7 +92,8 @@ body {
   border-radius: 999px;
   border: 1px solid var(--line);
   background: transparent;
-  padding: 0.75rem 1.2rem;
+  padding: 0.85rem 1.25rem;
+  min-height: 2.85rem;
   font-weight: 600;
   color: var(--ink);
   transition: background 0.15s ease;
@@ -120,7 +122,23 @@ body {
   border: 1px solid var(--line);
   background: var(--panel);
   backdrop-filter: blur(10px);
-  border-radius: 1.5rem;
+  border-radius: 1.65rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.confirm-pop {
+  animation: confirm-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes confirm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .nav-link {

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { startGameAction } from "@/app/actions";
 import { SubmitButton } from "@/components/auth-form";
+import { rethrowNextNavigation } from "@/lib/navigation";
 
 const ART: Record<string, { emoji: string; className: string; tag: string }> = {
   peaje: { emoji: "🎡", className: "game-card-peaje", tag: "Suerte" },
@@ -24,27 +25,28 @@ export function StartGameForm({
   compact?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const art = ART[gameType];
+
+  function onSubmit(fd: FormData) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const r = await startGameAction(fd);
+        if (r?.error) setError(r.error);
+      } catch (e) {
+        rethrowNextNavigation(e);
+        setError("No se pudo abrir el juego.");
+      }
+    });
+  }
 
   if (compact) {
     return (
-      <form
-        action={(fd) => {
-          setError(null);
-          startTransition(async () => {
-            try {
-              const r = await startGameAction(fd);
-              if (r?.error) setError(r.error);
-            } catch {
-              /* redirect */
-            }
-          });
-        }}
-      >
+      <form action={onSubmit}>
         <input type="hidden" name="game_type" value={gameType} />
-        <button type="submit" className="btn-ghost text-xs">
-          {label}
+        <button type="submit" disabled={pending} className="btn-ghost min-h-11 text-xs">
+          {pending ? "…" : label}
         </button>
         {error ? <p className="text-xs text-[var(--danger)]">{error}</p> : null}
       </form>
@@ -52,20 +54,7 @@ export function StartGameForm({
   }
 
   return (
-    <form
-      className={`game-card ${art.className}`}
-      action={(fd) => {
-        setError(null);
-        startTransition(async () => {
-          try {
-            const r = await startGameAction(fd);
-            if (r?.error) setError(r.error);
-          } catch {
-            /* redirect */
-          }
-        });
-      }}
-    >
+    <form className={`game-card ${art.className}`} action={onSubmit}>
       <input type="hidden" name="game_type" value={gameType} />
       <p className="absolute right-4 top-4 text-4xl opacity-90" aria-hidden>
         {art.emoji}
@@ -77,7 +66,7 @@ export function StartGameForm({
       {blurb ? <p className="mt-1 text-sm text-[var(--muted)]">{blurb}</p> : null}
       {needsOpponent ? (
         <input
-          className="input mt-3"
+          className="input mt-3 min-h-12"
           name="opponent_code"
           placeholder="Código amigo rival"
           required
@@ -85,7 +74,9 @@ export function StartGameForm({
         />
       ) : null}
       {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
-      <SubmitButton className="mt-4 w-full text-base">Jugar ahora</SubmitButton>
+      <SubmitButton className="mt-4 min-h-14 w-full text-base">
+        {pending ? "Abriendo…" : "Jugar ahora"}
+      </SubmitButton>
     </form>
   );
 }

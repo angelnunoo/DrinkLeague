@@ -4,8 +4,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { DrinkItemInput } from "@/lib/types";
 import { friendlyAuthError, friendlyLeagueError, normalizeLoginToEmail } from "@/lib/errors";
+import { pointsForItems } from "@/lib/domain";
 
-export type ActionResult = { error?: string; success?: boolean; message?: string };
+export type ActionResult = {
+  error?: string;
+  success?: boolean;
+  message?: string;
+  payload?: Record<string, unknown>;
+};
 
 export async function signUp(formData: FormData): Promise<ActionResult> {
   const loginRaw = String(formData.get("email") ?? formData.get("login") ?? "").trim();
@@ -221,19 +227,55 @@ export async function logDrinksAction(formData: FormData): Promise<ActionResult>
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("log_drinks_global", {
+  const { data: logId, error } = await supabase.rpc("log_drinks_global", {
     p_venue_name: venue,
     p_items: items,
   });
 
   if (error) return { error: friendlyLeagueError(error.message) };
 
-  // Refresh rivalries, streaks, objectives, medals (best effort)
   void Promise.resolve(supabase.rpc("refresh_legacy_hub", { p_league_id: null })).catch(
     () => undefined,
   );
 
-  return { success: true, message: "Consumición registrada." };
+  const points = pointsForItems(items);
+
+  return {
+    success: true,
+    message: "Consumo registrado correctamente",
+    payload: {
+      logId: logId ? String(logId) : null,
+      venue,
+      items,
+      points,
+    },
+  };
+}
+
+export async function voidDrinkLogAction(logId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("void_drink_log", {
+    p_log_id: logId,
+    p_as_admin: false,
+  });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  redirect("/app/drinks?voided=1");
+}
+
+export async function adminVoidDrinkLogAction(formData: FormData): Promise<void> {
+  const logId = String(formData.get("log_id") ?? "");
+  const leagueId = String(formData.get("league_id") ?? "") || undefined;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("void_drink_log", {
+    p_log_id: logId,
+    p_as_admin: true,
+  });
+  if (error) {
+    redirect(
+      `/app/admin?tab=drinks&error=${encodeURIComponent(friendlyLeagueError(error.message) || error.message)}`,
+    );
+  }
+  redirect(leagueId ? `/app/admin/leagues/${leagueId}?ok=void` : "/app/admin?tab=drinks&ok=void");
 }
 
 export async function updateProfileAction(formData: FormData): Promise<ActionResult> {
@@ -704,28 +746,30 @@ export async function adminAdjustTokensAction(formData: FormData): Promise<void>
   const userId = String(formData.get("user_id") ?? "");
   const delta = Number(formData.get("delta") ?? 0);
   const reason = String(formData.get("reason") ?? "admin");
+  const back = String(formData.get("back") ?? "") || `/app/admin/users/${userId}`;
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_adjust_tokens", {
     p_user_id: userId,
     p_delta: delta,
     p_reason: reason,
   });
-  if (error) redirect(`/app/admin?error=${encodeURIComponent(error.message)}`);
-  redirect("/app/admin?ok=tokens");
+  if (error) redirect(`${back}${back.includes("?") ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
+  redirect(`${back}${back.includes("?") ? "&" : "?"}ok=tokens`);
 }
 
 export async function adminAdjustXpAction(formData: FormData): Promise<void> {
   const userId = String(formData.get("user_id") ?? "");
   const delta = Number(formData.get("delta") ?? 0);
   const reason = String(formData.get("reason") ?? "admin");
+  const back = String(formData.get("back") ?? "") || `/app/admin/users/${userId}`;
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_adjust_xp", {
     p_user_id: userId,
     p_delta: delta,
     p_reason: reason,
   });
-  if (error) redirect(`/app/admin?error=${encodeURIComponent(error.message)}`);
-  redirect("/app/admin?ok=xp");
+  if (error) redirect(`${back}${back.includes("?") ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
+  redirect(`${back}${back.includes("?") ? "&" : "?"}ok=xp`);
 }
 
 export async function adminSetStatusAction(formData: FormData): Promise<void> {
@@ -803,6 +847,205 @@ export async function adminDecayChemistryAction(): Promise<void> {
   const { error } = await supabase.rpc("apply_chemistry_decay");
   if (error) redirect(`/app/admin?error=${encodeURIComponent(error.message)}`);
   redirect("/app/admin?ok=decay");
+}
+
+function adminRedirect(ok: string, error?: string, back?: string) {
+  const base = back || "/app/admin";
+  if (error) redirect(`${base}${base.includes("?") ? "&" : "?"}error=${encodeURIComponent(error)}`);
+  redirect(`${base}${base.includes("?") ? "&" : "?"}ok=${ok}`);
+}
+
+export async function adminLogDrinksForUserAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const venue = String(formData.get("venue") ?? "").trim() || "Admin";
+  const code = String(formData.get("drink_code") ?? "cerveza");
+  const qty = Math.max(1, Math.min(50, Number(formData.get("quantity") ?? 1)));
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_log_drinks_for_user", {
+    p_user_id: userId,
+    p_venue_name: venue,
+    p_items: [{ code, quantity: qty }],
+  });
+  adminRedirect("drinks", error?.message, back);
+}
+
+export async function adminAdjustLeaguePointsAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const leagueId = String(formData.get("league_id") ?? "");
+  const delta = Number(formData.get("delta") ?? 0);
+  const reason = String(formData.get("reason") ?? "admin points");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_adjust_league_points", {
+    p_user_id: userId,
+    p_league_id: leagueId,
+    p_delta: delta,
+    p_reason: reason,
+  });
+  adminRedirect("points", error?.message, back);
+}
+
+export async function adminSetLeaguePointsAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const leagueId = String(formData.get("league_id") ?? "");
+  const points = Number(formData.get("points") ?? 0);
+  const reason = String(formData.get("reason") ?? "set points");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_league_points", {
+    p_user_id: userId,
+    p_league_id: leagueId,
+    p_points: points,
+    p_reason: reason,
+  });
+  adminRedirect("set-points", error?.message, back);
+}
+
+export async function adminSetXpAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const xp = Number(formData.get("xp") ?? 0);
+  const reason = String(formData.get("reason") ?? "set xp");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_xp", {
+    p_user_id: userId,
+    p_xp: xp,
+    p_reason: reason,
+  });
+  adminRedirect("set-xp", error?.message, back);
+}
+
+export async function adminAdjustLevelAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const delta = Number(formData.get("delta") ?? 0);
+  const reason = String(formData.get("reason") ?? "level");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_adjust_level", {
+    p_user_id: userId,
+    p_delta: delta,
+    p_reason: reason,
+  });
+  adminRedirect("level", error?.message, back);
+}
+
+export async function adminRevokeTitleAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const code = String(formData.get("title_code") ?? "");
+  const reason = String(formData.get("reason") ?? "revoke");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_revoke_title", {
+    p_user_id: userId,
+    p_code: code,
+    p_reason: reason,
+  });
+  adminRedirect("revoke-title", error?.message, back);
+}
+
+export async function adminRevokeTrophyAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const trophyId = String(formData.get("trophy_id") ?? "");
+  const reason = String(formData.get("reason") ?? "revoke");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_revoke_trophy", {
+    p_user_id: userId,
+    p_trophy_id: trophyId,
+    p_reason: reason,
+  });
+  adminRedirect("revoke-trophy", error?.message, back);
+}
+
+export async function adminGrantAchievementAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const code = String(formData.get("achievement_code") ?? "");
+  const reason = String(formData.get("reason") ?? "grant");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_grant_achievement", {
+    p_user_id: userId,
+    p_code: code,
+    p_reason: reason,
+  });
+  adminRedirect("grant-ach", error?.message, back);
+}
+
+export async function adminRevokeAchievementAction(formData: FormData): Promise<void> {
+  const userId = String(formData.get("user_id") ?? "");
+  const code = String(formData.get("achievement_code") ?? "");
+  const reason = String(formData.get("reason") ?? "revoke");
+  const back = String(formData.get("back") ?? `/app/admin/users/${userId}`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_revoke_achievement", {
+    p_user_id: userId,
+    p_code: code,
+    p_reason: reason,
+  });
+  adminRedirect("revoke-ach", error?.message, back);
+}
+
+export async function adminCancelBetMarketAction(formData: FormData): Promise<void> {
+  const marketId = String(formData.get("market_id") ?? "");
+  const reason = String(formData.get("reason") ?? "cancel");
+  const back = String(formData.get("back") ?? "/app/admin?tab=bets");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_cancel_bet_market", {
+    p_market_id: marketId,
+    p_reason: reason,
+  });
+  adminRedirect("cancel-market", error?.message, back);
+}
+
+export async function adminCreateBetMarketAction(formData: FormData): Promise<void> {
+  const leagueId = String(formData.get("league_id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const a = String(formData.get("sel_a") ?? "Sí").trim();
+  const b = String(formData.get("sel_b") ?? "No").trim();
+  const oddsA = Number(formData.get("odds_a") ?? 2);
+  const oddsB = Number(formData.get("odds_b") ?? 2);
+  const hours = Number(formData.get("closes_hours") ?? 72);
+  const back = String(formData.get("back") ?? "/app/admin?tab=bets");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_create_bet_market", {
+    p_league_id: leagueId,
+    p_title: title,
+    p_selections: [
+      { label: a, odds: oddsA },
+      { label: b, odds: oddsB },
+    ],
+    p_closes_hours: hours,
+  });
+  adminRedirect("create-market", error?.message, back);
+}
+
+export async function adminUpdateBetMarketAction(formData: FormData): Promise<void> {
+  const marketId = String(formData.get("market_id") ?? "");
+  const title = String(formData.get("title") ?? "");
+  const status = String(formData.get("status") ?? "") || null;
+  const reason = String(formData.get("reason") ?? "update");
+  const back = String(formData.get("back") ?? "/app/admin?tab=bets");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_update_bet_market", {
+    p_market_id: marketId,
+    p_title: title,
+    p_status: status,
+    p_reason: reason,
+  });
+  adminRedirect("update-market", error?.message, back);
+}
+
+export async function adminSettleBetMarketAction(formData: FormData): Promise<void> {
+  const marketId = String(formData.get("market_id") ?? "");
+  const selectionId = String(formData.get("winning_selection_id") ?? "");
+  const back = String(formData.get("back") ?? "/app/admin?tab=bets");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("settle_bet_market", {
+    p_market_id: marketId,
+    p_winning_selection_id: selectionId,
+  });
+  adminRedirect("settle", error?.message, back);
 }
 
 export async function refreshLegacyHubAction(leagueId?: string): Promise<void> {

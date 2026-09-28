@@ -103,7 +103,7 @@ export default async function AppHomePage() {
   const weeklyChallenge = (challenges ?? [])[0];
 
   return (
-    <section className="animate-rise space-y-5 pb-4">
+    <section className="animate-rise space-y-6 pb-6">
       {/* Hero status */}
       <div className="home-hero">
         <div className="flex items-start justify-between gap-3">
@@ -170,13 +170,13 @@ export default async function AppHomePage() {
         }
       />
 
-      {/* Mega CTA + log */}
-      <div className="surface overflow-hidden p-4 sm:p-5">
-        <a href="#registrar" className="mega-cta animate-pop mb-4">
+      {/* Mega CTA + log — thumb zone */}
+      <div className="surface overflow-hidden p-5 sm:p-6">
+        <a href="#registrar" className="mega-cta animate-pop mb-5 !min-h-16 !text-[1.55rem]">
           <span aria-hidden>🍺</span>
           Registrar bebida
         </a>
-        <div id="registrar">
+        <div id="registrar" className="space-y-1">
           <LogDrinksForm mega />
         </div>
       </div>
@@ -215,8 +215,8 @@ export default async function AppHomePage() {
       ) : null}
 
       {/* Evento / reto */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="stat-chip">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="stat-chip p-4">
           <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Evento activo</p>
           <p className="mt-1 font-display text-lg">
             {weeklyChallenge
@@ -231,7 +231,7 @@ export default async function AppHomePage() {
               : "Crea o entra en una liga para eventos"}
           </p>
         </div>
-        <Link href="/app/challenges" className="stat-chip transition hover:border-[var(--teal)]">
+        <Link href="/app/challenges" className="stat-chip p-4 transition hover:border-[var(--teal)]">
           <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Reto semanal</p>
           <p className="mt-1 font-display text-lg">
             {weeklyChallenge ? "En juego" : "Sin reto · crear"}
@@ -242,8 +242,8 @@ export default async function AppHomePage() {
 
       {/* Clasificación rápida */}
       {leaderboard && primaryLeague ? (
-        <div className="surface p-4">
-          <div className="mb-3 flex items-center justify-between">
+        <div className="surface p-5">
+          <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
                 Clasificación rápida
@@ -252,24 +252,24 @@ export default async function AppHomePage() {
             </div>
             <Link
               href={`/app/leagues/${primaryLeague.id}`}
-              className="text-xs font-semibold text-[var(--teal)]"
+              className="min-h-11 rounded-full border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--teal)]"
             >
               Ver todo
             </Link>
           </div>
-          <ol className="space-y-2">
+          <ol className="space-y-3">
             {leaderboard.top.map((row, i) => (
               <li
                 key={row.user_id}
-                className={`rank-row flex items-center gap-3 px-3 py-2.5 ${
+                className={`rank-row flex items-center gap-3 px-4 py-3 ${
                   row.user_id === profile.id ? "rank-row-me" : ""
                 }`}
               >
-                <span className="font-display w-6 text-center text-[var(--muted)]">
-                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
+                <span className="font-display w-8 text-center text-lg text-[var(--muted)]">
+                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
                 </span>
                 <span className="min-w-0 flex-1 truncate font-semibold">{row.display_name}</span>
-                <span className="font-display text-[var(--amber)]">{row.points}</span>
+                <span className="font-display text-lg text-[var(--amber)]">{row.points}</span>
               </li>
             ))}
           </ol>
@@ -282,7 +282,7 @@ export default async function AppHomePage() {
       )}
 
       {/* Quick modules — visual tiles, not empty admin grid */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-3">
         {[
           { href: "/app/battle-pass", title: "Pase", sub: "Recompensas" },
           { href: "/app/objectives", title: "Objetivos", sub: "Misiones" },
@@ -294,12 +294,13 @@ export default async function AppHomePage() {
           { href: "/app/museum", title: "Museo", sub: "Récords" },
           { href: "/app/stats", title: "Stats", sub: "Gráficos" },
           { href: "/app/social", title: "Social", sub: "Química" },
+          { href: "/app/drinks", title: "Bebidas", sub: "Historial" },
           { href: "/app/profile", title: "Perfil", sub: "Vitrina" },
         ].map((t) => (
           <Link
             key={t.href}
             href={t.href}
-            className="surface p-3.5 transition active:scale-[0.98] hover:border-[var(--teal)]"
+            className="surface min-h-[4.5rem] p-4 transition active:scale-[0.98] hover:border-[var(--teal)]"
           >
             <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">{t.sub}</p>
             <p className="font-display text-xl">{t.title}</p>
