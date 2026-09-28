@@ -45,8 +45,11 @@ export function friendlyLeagueError(message: string | undefined | null): string 
   if (m.includes("too short") || m.includes("name too short") || m.includes("demasiado corto")) {
     return "El nombre es demasiado corto.";
   }
-  if (m.includes("ya tienes una liga") || m.includes("ese nombre")) {
-    return "Ya tienes una liga activa con ese nombre.";
+  if (m.includes("ya tienes una liga activa llamada") || m.includes("elige otro nombre")) {
+    return "Ya tienes una liga con ese nombre. Ponle otro nombre distinto.";
+  }
+  if (m.includes("ya tienes una liga") && m.includes("nombre")) {
+    return "Ya tienes una liga con ese nombre. Ponle otro nombre distinto.";
   }
   if (m.includes("invalid or expired") || m.includes("no válido") || m.includes("no valida")) {
     return "Código o enlace de invitación no válido.";

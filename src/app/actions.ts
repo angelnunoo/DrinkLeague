@@ -139,19 +139,29 @@ export async function createLeagueAction(formData: FormData): Promise<ActionResu
 
   if (name.length < 2) return { error: "El nombre de la liga es obligatorio." };
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("create_league", {
-    p_name: name,
-    p_description: description || null,
-    p_timezone: timezone,
-  });
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("create_league", {
+      p_name: name,
+      p_description: description || null,
+      p_timezone: timezone,
+    });
 
-  if (error) return { error: friendlyLeagueError(error.message) };
+    if (error) return { error: friendlyLeagueError(error.message) };
 
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row?.league_id) return { error: "No se pudo crear la liga." };
+    const row = Array.isArray(data) ? data[0] : data;
+    const leagueId = row?.league_id ? String(row.league_id) : "";
+    if (!leagueId) return { error: "No se pudo crear la liga." };
 
-  redirect(`/app/leagues/${row.league_id}?created=1`);
+    return {
+      success: true,
+      message: "Liga creada",
+      payload: { leagueId },
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "No se pudo crear la liga.";
+    return { error: friendlyLeagueError(msg) };
+  }
 }
 
 export async function joinByCodeAction(formData: FormData): Promise<ActionResult> {
