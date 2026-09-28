@@ -1156,7 +1156,7 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
-/* —— Premium Shop —— */
+/* -- Premium Shop -- */
 .shop-hero {
   background:
     radial-gradient(380px 160px at 100% 0%, rgba(255, 213, 106, 0.3), transparent),
