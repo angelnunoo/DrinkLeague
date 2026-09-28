@@ -467,12 +467,16 @@ export async function claimBirthdayAction(): Promise<void> {
 export async function startGameAction(formData: FormData): Promise<ActionResult> {
   const gameType = String(formData.get("game_type") ?? "");
   const opponent = String(formData.get("opponent_code") ?? "").trim() || null;
+  const opponentUserId = String(formData.get("opponent_user_id") ?? "").trim() || null;
+  const opponentName = String(formData.get("opponent_name") ?? "").trim() || null;
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("start_game", {
     p_game_type: gameType,
     p_opponent_code: opponent,
     p_party_id: null,
+    p_opponent_user_id: opponentUserId,
+    p_opponent_name: opponentName,
   });
   if (error) return { error: friendlyLeagueError(error.message) || error.message };
   redirect(`/app/games/${data}`);
@@ -549,8 +553,25 @@ export async function drawReyAction(sessionId: string): Promise<void> {
 
 export async function playPeajeAction(sessionId: string): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("play_peaje_spin", { p_session_id: sessionId });
+  const { error } = await supabase.rpc("play_peaje_step", {
+    p_session_id: sessionId,
+    p_guess: "start",
+  });
   if (error) redirect(`/app/games/${sessionId}?error=${encodeURIComponent(error.message)}`);
+  await notifyGameMilestone(sessionId);
+  redirect(`/app/games/${sessionId}`);
+}
+
+export async function playPeajeStepAction(
+  sessionId: string,
+  guess: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("play_peaje_step", {
+    p_session_id: sessionId,
+    p_guess: guess,
+  });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
   await notifyGameMilestone(sessionId);
   redirect(`/app/games/${sessionId}`);
 }

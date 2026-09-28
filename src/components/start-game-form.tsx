@@ -6,9 +6,30 @@ import { SubmitButton } from "@/components/auth-form";
 import { rethrowNextNavigation } from "@/lib/navigation";
 
 const ART: Record<string, { emoji: string; className: string; tag: string }> = {
-  peaje: { emoji: "🎡", className: "game-card-peaje", tag: "Suerte" },
-  rey: { emoji: "👑", className: "game-card-rey", tag: "Cartas" },
+  peaje: { emoji: "🚧", className: "game-card-peaje", tag: "Suerte" },
+  rey: { emoji: "👑", className: "game-card-rey", tag: "Baraja española" },
   duelo: { emoji: "⚔️", className: "game-card-duelo", tag: "1 vs 1" },
+};
+
+const RULES: Record<string, string[]> = {
+  peaje: [
+    "Carta 1–2: Par o Impar",
+    "Carta 3: Peaje obligatorio",
+    "Carta 4–5: Mayor o Menor",
+    "Final: adivina el palo",
+  ],
+  rey: [
+    "Baraja española de 40 cartas",
+    "Cada carta tiene una acción de beber",
+    "Cuenta Reyes 0/4 → 4/4",
+    "Al 4º Rey termina la partida",
+  ],
+  duelo: [
+    "Elige rival (amigo o nombre)",
+    "Una carta española a cada uno",
+    "La más alta gana · la baja bebe",
+    "Empate → desempate automático",
+  ],
 };
 
 export function StartGameForm({
@@ -17,15 +38,18 @@ export function StartGameForm({
   blurb,
   needsOpponent,
   compact,
+  friends,
 }: {
   gameType: "peaje" | "rey" | "duelo";
   label: string;
   blurb?: string;
   needsOpponent?: boolean;
   compact?: boolean;
+  friends?: Array<{ id: string; display_name: string; friend_code: string }>;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [mode, setMode] = useState<"friend" | "guest">("friend");
   const art = ART[gameType];
 
   function onSubmit(fd: FormData) {
@@ -64,18 +88,69 @@ export function StartGameForm({
       </p>
       <h2 className="font-display text-3xl text-[var(--ink-strong)]">{label}</h2>
       {blurb ? <p className="mt-1 text-sm text-[var(--muted)]">{blurb}</p> : null}
+
+      <ul className="mt-3 space-y-1 text-xs text-[var(--muted)]">
+        {(RULES[gameType] ?? []).map((r) => (
+          <li key={r}>· {r}</li>
+        ))}
+      </ul>
+
       {needsOpponent ? (
-        <input
-          className="input mt-3 min-h-12"
-          name="opponent_code"
-          placeholder="Código amigo rival"
-          required
-          maxLength={12}
-        />
+        <div className="mt-3 space-y-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`min-h-10 flex-1 rounded-full text-xs font-semibold ${
+                mode === "friend" ? "bg-[var(--ink)] text-[#0b1512]" : "border border-[var(--line)]"
+              }`}
+              onClick={() => setMode("friend")}
+            >
+              Amigo
+            </button>
+            <button
+              type="button"
+              className={`min-h-10 flex-1 rounded-full text-xs font-semibold ${
+                mode === "guest" ? "bg-[var(--ink)] text-[#0b1512]" : "border border-[var(--line)]"
+              }`}
+              onClick={() => setMode("guest")}
+            >
+              Nombre
+            </button>
+          </div>
+          {mode === "friend" ? (
+            <>
+              {(friends ?? []).length > 0 ? (
+                <select className="input min-h-12" name="opponent_user_id" defaultValue="">
+                  <option value="">Elige jugador…</option>
+                  {friends!.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.display_name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              <input
+                className="input min-h-12"
+                name="opponent_code"
+                placeholder="O código amigo"
+                maxLength={12}
+              />
+            </>
+          ) : (
+            <input
+              className="input min-h-12"
+              name="opponent_name"
+              placeholder="Nombre del rival (ej. David)"
+              required
+              maxLength={40}
+            />
+          )}
+        </div>
       ) : null}
+
       {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
       <SubmitButton className="mt-4 min-h-14 w-full text-base">
-        {pending ? "Abriendo…" : "Jugar ahora"}
+        {pending ? "Abriendo…" : "Jugar"}
       </SubmitButton>
     </form>
   );

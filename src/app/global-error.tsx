@@ -33,9 +33,17 @@ export default function GlobalError({
           <p style={{ fontSize: 48, margin: 0 }}>⚠️</p>
           <h1 style={{ fontSize: 28, marginTop: 12 }}>Ha ocurrido un error</h1>
           <p style={{ color: "#8fa39a", maxWidth: 320, margin: "8px auto 24px" }}>
-            Reintenta o vuelve al inicio.
+            Reintenta o vuelve atrás con el menú.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 280, margin: "0 auto" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              maxWidth: 280,
+              margin: "0 auto",
+            }}
+          >
             <button
               type="button"
               onClick={reset}
@@ -52,7 +60,7 @@ export default function GlobalError({
               Reintentar
             </button>
             <Link
-              href="/app"
+              href="/app/games"
               style={{
                 minHeight: 48,
                 display: "grid",
@@ -64,7 +72,7 @@ export default function GlobalError({
                 fontWeight: 600,
               }}
             >
-              Volver al inicio
+              ← Juegos
             </Link>
           </div>
         </div>

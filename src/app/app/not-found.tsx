@@ -10,8 +10,8 @@ export default function AppNotFound() {
       <p className="max-w-sm text-sm text-[var(--muted)]">
         Esa ruta no existe o ya no está disponible.
       </p>
-      <Link href="/app" className="btn-primary min-h-12 px-8">
-        Volver al inicio
+      <Link href="/app/games" className="btn-ghost min-h-12 px-8">
+        ← Juegos
       </Link>
     </section>
   );
