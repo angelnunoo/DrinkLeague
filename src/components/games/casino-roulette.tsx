@@ -200,7 +200,7 @@ export function CasinoRoulette({ tokenBalance }: { tokenBalance: number }) {
               }}
               className="mega-cta !min-h-14 !text-base"
             >
-              🔄 Volver a apostar
+              🔄 Volver a jugar
             </button>
             <button
               type="button"

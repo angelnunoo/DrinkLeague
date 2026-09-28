@@ -256,6 +256,8 @@ export default async function GamePlayPage({
             sessionId={id}
             meName={profile.display_name}
             rivalName={rivalName}
+            opponentUserId={seat1 ?? null}
+            opponentName={guest}
             initial={{
               phase: normalizePhase(session.status, state.phase),
               guest_name: guest,

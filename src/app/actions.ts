@@ -422,12 +422,12 @@ export async function placeBetAction(formData: FormData): Promise<ActionResult> 
       p_category: "bets",
       p_title: "🎰 Apuesta colocada",
       p_body: `Has apostado ${stake} fichas. Te avisaremos del resultado.`,
-      p_href: "/app/bets",
+      p_href: "/app/casino?tab=apuestas",
       p_payload: { stake, selection_id: selectionId },
     });
   }
 
-  redirect("/app/bets?placed=1");
+  redirect("/app/casino?tab=apuestas&placed=1");
 }
 
 export async function ensureWeeklyMarketAction(leagueId: string): Promise<void> {
@@ -441,10 +441,10 @@ export async function ensureWeeklyMarketAction(leagueId: string): Promise<void> 
       p_league_id: leagueId,
     });
     if (fallback) {
-      redirect(`/app/bets?league=${leagueId}&error=${encodeURIComponent(fallback.message)}`);
+      redirect(`/app/casino?tab=apuestas&league=${leagueId}&error=${encodeURIComponent(fallback.message)}`);
     }
   }
-  redirect(`/app/bets?league=${leagueId}`);
+  redirect(`/app/casino?tab=apuestas&league=${leagueId}`);
 }
 
 export async function createSuperBoostAction(selectionId: string): Promise<void> {
@@ -453,7 +453,7 @@ export async function createSuperBoostAction(selectionId: string): Promise<void>
     p_selection_id: selectionId,
     p_hours: 2,
   });
-  if (error) redirect(`/app/bets?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/app/casino?tab=apuestas&error=${encodeURIComponent(error.message)}`);
 
   // Notify league members about new SuperAumento
   const { data: sel } = await supabase
@@ -474,13 +474,13 @@ export async function createSuperBoostAction(selectionId: string): Promise<void>
         p_category: "boost",
         p_title: "🔥 Nuevo SuperAumento disponible",
         p_body: `${sel?.label ?? "Selección"} · ${market.title}`,
-        p_href: `/app/bets?league=${market.league_id}`,
+        p_href: `/app/casino?tab=apuestas&league=${market.league_id}`,
         p_payload: { selection_id: selectionId },
       });
     }
   }
 
-  redirect("/app/bets?boost=1");
+  redirect("/app/casino?tab=apuestas&boost=1");
 }
 
 export async function claimBirthdayAction(): Promise<void> {
@@ -702,7 +702,7 @@ export async function settleBetMarketAction(formData: FormData): Promise<void> {
   const selectionId = String(formData.get("winning_selection_id") ?? "");
   const leagueId = String(formData.get("league_id") ?? "");
   if (!marketId || !selectionId) {
-    redirect(`/app/bets?error=${encodeURIComponent("Elige la selección ganadora.")}`);
+    redirect(`/app/casino?tab=apuestas&error=${encodeURIComponent("Elige la selección ganadora.")}`);
   }
   const supabase = await createClient();
   const { error } = await supabase.rpc("settle_bet_market", {
@@ -711,10 +711,10 @@ export async function settleBetMarketAction(formData: FormData): Promise<void> {
   });
   if (error) {
     redirect(
-      `/app/bets?league=${leagueId}&error=${encodeURIComponent(friendlyLeagueError(error.message) || error.message)}`,
+      `/app/casino?tab=apuestas&league=${leagueId}&error=${encodeURIComponent(friendlyLeagueError(error.message) || error.message)}`,
     );
   }
-  redirect(`/app/bets?league=${leagueId}&settled=1`);
+  redirect(`/app/casino?tab=apuestas&league=${leagueId}&settled=1`);
 }
 
 export async function sendFriendRequestAction(formData: FormData): Promise<ActionResult> {

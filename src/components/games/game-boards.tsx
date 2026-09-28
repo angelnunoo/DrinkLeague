@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { playPeajeStepAction, drawReyAction, playDueloAction } from "@/app/actions";
 import { SpanishPlayingCard, type SpanishCard, SUIT_META, RANK_LABELS } from "./spanish-card";
+import { GameReplayBar } from "./game-replay-bar";
 
 type PeajeState = {
   phase?: string;
@@ -95,6 +96,7 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
           </div>
         </div>
         <HistoryList history={initial.history} />
+        <GameReplayBar gameType="peaje" />
       </div>
     );
   }
@@ -368,6 +370,7 @@ export function ReyPlay({
             </div>
           </div>
           <p className="text-sm text-[var(--muted)]">Participantes: {players.join(" · ") || "—"}</p>
+          <GameReplayBar gameType="rey" />
         </div>
       ) : (
         <button type="button" disabled={pending} className="mega-cta !text-lg" onClick={draw}>
@@ -402,11 +405,15 @@ export function DueloPlay({
   initial,
   meName,
   rivalName,
+  opponentUserId,
+  opponentName,
 }: {
   sessionId: string;
   initial: DueloState;
   meName: string;
   rivalName: string;
+  opponentUserId?: string | null;
+  opponentName?: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -490,6 +497,16 @@ export function DueloPlay({
               <p className="font-display text-2xl text-[var(--amber)]">+{initial.tokens ?? 0}</p>
             </div>
           </div>
+          <GameReplayBar
+            gameType="duelo"
+            extras={{
+              ...(opponentUserId ? { opponent_user_id: opponentUserId } : {}),
+              ...(opponentName && !opponentUserId ? { opponent_name: opponentName } : {}),
+              ...(!opponentUserId && !opponentName && rivalName
+                ? { opponent_name: rivalName }
+                : {}),
+            }}
+          />
         </div>
       ) : null}
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}

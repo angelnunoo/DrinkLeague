@@ -186,12 +186,12 @@ export function SocialRoulette() {
           {spinning || pending ? "Girando…" : "🔄 Girar"}
         </button>
       ) : (
-        <div className="roulette-result roulette-result-celebrate">
+        <div className="roulette-result roulette-result-celebrate roulette-result-fullscreen">
           <div className="roulette-confetti" aria-hidden />
           <p className="text-5xl" aria-hidden>
             {result.label?.slice(0, 2) ?? "🎉"}
           </p>
-          <h3 className="font-display text-3xl">{result.label ?? result.result}</h3>
+          <h3 className="font-display text-4xl">{result.label ?? result.result}</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">¡A cumplir el destino!</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
@@ -200,7 +200,7 @@ export function SocialRoulette() {
               onClick={spin}
               className="mega-cta !min-h-14 !text-base"
             >
-              🔄 Girar otra vez
+              🔄 Jugar otra vez
             </button>
             <button
               type="button"
