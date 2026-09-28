@@ -45,9 +45,29 @@ export default async function GameSessionPage({
     type === "rey" ? "game-card-rey" : type === "duelo" ? "game-card-duelo" : "game-card-peaje";
   const title = type === "peaje" ? "Peaje" : type === "rey" ? "Rey" : "Duelo";
 
+  // Normalize legacy phases ("ready") to current UI phases
+  function normalizePhase(raw: unknown): string {
+    if (session.status === "finished") return "finished";
+    const p = String(raw ?? "intro");
+    if (p === "ready" || p === "start" || !p) return "intro";
+    return p;
+  }
+
   const guest = typeof state.guest_name === "string" ? state.guest_name : null;
   const seat1 = (players ?? []).find((p) => p.seat === 1)?.user_id;
   const rivalName = seat1 ? (umap.get(seat1) ?? "Rival") : guest ?? "Invitado";
+
+  if (!["peaje", "rey", "duelo"].includes(type)) {
+    return (
+      <section className="animate-rise space-y-5 text-center">
+        <p className="text-5xl">⚠️</p>
+        <h1 className="font-display text-3xl">Partida no válida</h1>
+        <Link href="/app/games" className="btn-primary inline-flex min-h-12 items-center px-6">
+          Volver a Juegos
+        </Link>
+      </section>
+    );
+  }
 
   return (
     <section className="animate-rise space-y-5">
@@ -74,10 +94,7 @@ export default async function GameSessionPage({
           <PeajePlay
             sessionId={id}
             initial={{
-              phase:
-                session.status === "finished"
-                  ? "finished"
-                  : String(state.phase ?? "intro"),
+              phase: normalizePhase(state.phase),
               step: Number(state.step ?? 0),
               hits: Number(state.hits ?? 0),
               misses: Number(state.misses ?? 0),
@@ -101,10 +118,7 @@ export default async function GameSessionPage({
             sessionId={id}
             players={playerNames}
             initial={{
-              phase:
-                session.status === "finished"
-                  ? "finished"
-                  : String(state.phase ?? "intro"),
+              phase: normalizePhase(state.phase),
               kings: Number(state.kings ?? 0),
               turns: Number(state.turns ?? 0),
               last_card: state.last_card as SpanishCard | undefined,
@@ -122,10 +136,7 @@ export default async function GameSessionPage({
             meName={profile.display_name}
             rivalName={rivalName}
             initial={{
-              phase:
-                session.status === "finished"
-                  ? "finished"
-                  : String(state.phase ?? "intro"),
+              phase: normalizePhase(state.phase),
               guest_name: guest,
               last: (state.last ?? undefined) as
                 | {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { rethrowNextNavigation } from "@/lib/navigation";
+import { useRouter } from "next/navigation";
 
-type ActionResultLike = { error?: string } | void;
+type ActionResultLike = { error?: string; success?: boolean } | void;
 
 export function ConfirmDeleteButton({
   action,
@@ -14,6 +14,7 @@ export function ConfirmDeleteButton({
   label?: string;
   confirmLabel?: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +55,12 @@ export function ConfirmDeleteButton({
                 const result = await action();
                 if (result && typeof result === "object" && result.error) {
                   setError(result.error);
+                  return;
                 }
-              } catch (e) {
-                rethrowNextNavigation(e);
-                setError("No se pudo eliminar.");
+                router.replace("/app/drinks?voided=1");
+                router.refresh();
+              } catch {
+                setError("No se pudo eliminar. Inténtalo de nuevo.");
               }
             });
           }}

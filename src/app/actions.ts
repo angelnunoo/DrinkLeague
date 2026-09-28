@@ -253,13 +253,14 @@ export async function logDrinksAction(formData: FormData): Promise<ActionResult>
 }
 
 export async function voidDrinkLogAction(logId: string): Promise<ActionResult> {
+  if (!logId) return { error: "Consumición no válida." };
   const supabase = await createClient();
   const { error } = await supabase.rpc("void_drink_log", {
     p_log_id: logId,
     p_as_admin: false,
   });
   if (error) return { error: friendlyLeagueError(error.message) || error.message };
-  redirect("/app/drinks?voided=1");
+  return { success: true, message: "Consumición eliminada" };
 }
 
 export async function adminVoidDrinkLogAction(formData: FormData): Promise<void> {
@@ -465,30 +466,44 @@ export async function claimBirthdayAction(): Promise<void> {
 }
 
 export async function startGameAction(formData: FormData): Promise<ActionResult> {
-  const gameType = String(formData.get("game_type") ?? "");
+  const gameType = String(formData.get("game_type") ?? "").trim();
   const opponent = String(formData.get("opponent_code") ?? "").trim() || null;
-  const opponentUserId = String(formData.get("opponent_user_id") ?? "").trim() || null;
+  const opponentUserIdRaw = String(formData.get("opponent_user_id") ?? "").trim() || null;
   const opponentName = String(formData.get("opponent_name") ?? "").trim() || null;
 
   if (!["peaje", "rey", "duelo"].includes(gameType)) {
     return { error: "Juego no válido." };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("start_game", {
-    p_game_type: gameType,
-    p_opponent_code: opponent,
-    p_party_id: null,
-    p_opponent_user_id: opponentUserId,
-    p_opponent_name: opponentName,
-  });
-  if (error) return { error: friendlyLeagueError(error.message) || error.message };
-  if (!data) return { error: "No se pudo crear la partida." };
-  return {
-    success: true,
-    message: "Partida creada",
-    payload: { sessionId: String(data) },
-  };
+  // Empty select value often arrives as "" — treat as null UUID
+  const opponentUserId =
+    opponentUserIdRaw && /^[0-9a-f-]{36}$/i.test(opponentUserIdRaw) ? opponentUserIdRaw : null;
+
+  if (gameType === "duelo" && !opponentUserId && !opponent && !opponentName) {
+    return { error: "Elige un rival o escribe su nombre." };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("start_game", {
+      p_game_type: gameType,
+      p_opponent_code: opponent,
+      p_party_id: null,
+      p_opponent_user_id: opponentUserId,
+      p_opponent_name: opponentName,
+    });
+    if (error) return { error: friendlyLeagueError(error.message) || error.message };
+    const sessionId = data != null ? String(data).trim() : "";
+    if (!sessionId) return { error: "No se pudo crear la partida." };
+    return {
+      success: true,
+      message: "Partida creada",
+      payload: { sessionId },
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error al crear la partida";
+    return { error: friendlyLeagueError(msg) || "No se pudo crear la partida." };
+  }
 }
 
 async function notifyGameMilestone(sessionId: string) {

@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { startGameAction } from "@/app/actions";
-import { SubmitButton } from "@/components/auth-form";
 
 const ART: Record<string, { emoji: string; className: string; tag: string }> = {
   peaje: { emoji: "🚧", className: "game-card-peaje", tag: "Suerte" },
@@ -32,6 +30,17 @@ const RULES: Record<string, string[]> = {
   ],
 };
 
+function extractSessionId(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const raw = (payload as Record<string, unknown>).sessionId;
+  if (typeof raw === "string" && raw.length > 0) return raw;
+  if (raw != null) {
+    const s = String(raw).trim();
+    return s.length > 0 ? s : null;
+  }
+  return null;
+}
+
 export function StartGameForm({
   gameType,
   label,
@@ -47,28 +56,36 @@ export function StartGameForm({
   compact?: boolean;
   friends?: Array<{ id: string; display_name: string; friend_code: string }>;
 }) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<"friend" | "guest">("friend");
   const art = ART[gameType];
 
-  function onSubmit(fd: FormData) {
+  async function onSubmit(fd: FormData) {
     setError(null);
-    startTransition(async () => {
+    setPending(true);
+    try {
+      // Ensure game type is always present even if form fields are odd on mobile
+      if (!fd.get("game_type")) fd.set("game_type", gameType);
+
       const r = await startGameAction(fd);
       if (r?.error) {
         setError(r.error);
+        setPending(false);
         return;
       }
-      const sessionId = (r?.payload as { sessionId?: string } | undefined)?.sessionId;
+      const sessionId = extractSessionId(r?.payload);
       if (!sessionId) {
         setError("No se pudo abrir la partida.");
+        setPending(false);
         return;
       }
-      router.push(`/app/games/${sessionId}`);
-      router.refresh();
-    });
+      // Hard navigation — more reliable than router.push after server actions on mobile PWAs
+      window.location.assign(`/app/games/${sessionId}`);
+    } catch {
+      setError("No se pudo abrir la partida. Inténtalo de nuevo.");
+      setPending(false);
+    }
   }
 
   if (compact) {
@@ -155,9 +172,13 @@ export function StartGameForm({
       ) : null}
 
       {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
-      <SubmitButton className="mt-4 min-h-14 w-full text-base">
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn-primary mt-4 min-h-14 w-full text-base"
+      >
         {pending ? "Abriendo…" : "Jugar"}
-      </SubmitButton>
+      </button>
     </form>
   );
 }

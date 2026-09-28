@@ -29,12 +29,16 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
   function run(guess: string) {
     setError(null);
     startTransition(async () => {
-      const r = await playPeajeStepAction(sessionId, guess);
-      if (r?.error) {
-        setError(r.error);
-        return;
+      try {
+        const r = await playPeajeStepAction(sessionId, guess);
+        if (r?.error) {
+          setError(r.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("No se pudo jugar este paso. Reintenta.");
       }
-      router.refresh();
     });
   }
 
@@ -261,12 +265,16 @@ export function ReyPlay({
   function draw() {
     setError(null);
     startTransition(async () => {
-      const r = await drawReyAction(sessionId);
-      if (r?.error) {
-        setError(r.error);
-        return;
+      try {
+        const r = await drawReyAction(sessionId);
+        if (r?.error) {
+          setError(r.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("No se pudo sacar carta. Reintenta.");
       }
-      router.refresh();
     });
   }
 
@@ -385,12 +393,16 @@ export function DueloPlay({
   function start() {
     setError(null);
     startTransition(async () => {
-      const r = await playDueloAction(sessionId);
-      if (r?.error) {
-        setError(r.error);
-        return;
+      try {
+        const r = await playDueloAction(sessionId);
+        if (r?.error) {
+          setError(r.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("No se pudo repartir. Reintenta.");
       }
-      router.refresh();
     });
   }
 
