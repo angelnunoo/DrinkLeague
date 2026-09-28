@@ -72,18 +72,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex-1 space-y-1 pt-6">{children}</div>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--panel)_94%,transparent)] backdrop-blur-md">
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5 px-2 py-2.5 text-center text-[10px] font-semibold sm:max-w-2xl sm:text-xs lg:max-w-4xl">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5 px-1 py-2.5 text-center text-[10px] font-semibold sm:max-w-2xl sm:text-xs lg:max-w-4xl">
           <Link href="/app" className="nav-link min-h-12 rounded-xl px-0.5 py-2 text-[var(--amber)]">
             Inicio
           </Link>
-          <Link href="/app/activity" className="nav-link min-h-12 rounded-xl px-0.5 py-2">
-            Actividad
+          <Link href="/app/games" className="nav-link min-h-12 rounded-xl px-0.5 py-2">
+            🎮 Juegos
+          </Link>
+          <Link href="/app/casino" className="nav-link min-h-12 rounded-xl px-0.5 py-2">
+            🎰 Casino
           </Link>
           <Link href="/app/leagues" className="nav-link min-h-12 rounded-xl px-0.5 py-2">
             Ligas
-          </Link>
-          <Link href="/app/drinks" className="nav-link min-h-12 rounded-xl px-0.5 py-2">
-            Bebidas
           </Link>
           <Link
             href={isAdmin ? "/app/admin" : "/app/profile"}

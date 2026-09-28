@@ -862,3 +862,296 @@ body {
 .animate-pop {
   animation: pop 0.45s ease both;
 }
+
+/* —— DrinkCasino / Ruleta / Bingo —— */
+.casino-hero {
+  background:
+    radial-gradient(420px 180px at 90% 0%, rgba(240, 162, 2, 0.28), transparent),
+    radial-gradient(360px 160px at 10% 100%, rgba(45, 212, 191, 0.18), transparent),
+    linear-gradient(145deg, #1a1208 0%, #0b1512 45%, #121a28 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 213, 106, 0.12);
+}
+
+.game-card-ruleta-social {
+  background:
+    linear-gradient(160deg, rgba(96, 165, 250, 0.14), transparent 50%),
+    rgba(12, 24, 20, 0.92);
+}
+
+.game-card-ruleta-casino {
+  background:
+    linear-gradient(160deg, rgba(240, 162, 2, 0.16), transparent 45%),
+    rgba(14, 12, 8, 0.95);
+}
+
+.game-card-bingo {
+  background:
+    linear-gradient(160deg, rgba(45, 212, 191, 0.14), transparent 50%),
+    rgba(10, 18, 22, 0.95);
+}
+
+.roulette-stage {
+  position: relative;
+  width: min(100%, 18rem);
+  margin: 0.5rem auto 1rem;
+  aspect-ratio: 1;
+}
+
+.roulette-stage-casino {
+  width: min(100%, 16rem);
+}
+
+.roulette-pointer {
+  position: absolute;
+  top: -0.35rem;
+  left: 50%;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  border-left: 0.55rem solid transparent;
+  border-right: 0.55rem solid transparent;
+  border-top: 0.9rem solid var(--amber);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+}
+
+.roulette-wheel {
+  position: absolute;
+  inset: 0.6rem;
+  border-radius: 50%;
+  border: 4px solid color-mix(in srgb, var(--gold) 55%, #2a1a00);
+  box-shadow:
+    0 0 0 6px rgba(7, 16, 14, 0.85),
+    0 16px 40px rgba(0, 0, 0, 0.5),
+    inset 0 0 24px rgba(0, 0, 0, 0.35);
+  will-change: transform;
+}
+
+.roulette-wheel-casino {
+  background: conic-gradient(
+    from -90deg,
+    #1a1a1a 0deg 9.7deg,
+    #c41e3a 9.7deg 19.4deg,
+    #1a1a1a 19.4deg 29.1deg,
+    #c41e3a 29.1deg 38.8deg,
+    #1a1a1a 38.8deg 48.5deg,
+    #c41e3a 48.5deg 58.2deg,
+    #1a1a1a 58.2deg 67.9deg,
+    #c41e3a 67.9deg 77.6deg,
+    #1a1a1a 77.6deg 87.3deg,
+    #c41e3a 87.3deg 97deg,
+    #1a1a1a 97deg 106.7deg,
+    #c41e3a 106.7deg 116.4deg,
+    #1a1a1a 116.4deg 126.1deg,
+    #c41e3a 126.1deg 135.8deg,
+    #1a1a1a 135.8deg 145.5deg,
+    #c41e3a 145.5deg 155.2deg,
+    #1a1a1a 155.2deg 164.9deg,
+    #c41e3a 164.9deg 174.6deg,
+    #1a1a1a 174.6deg 184.3deg,
+    #c41e3a 184.3deg 194deg,
+    #1a1a1a 194deg 203.7deg,
+    #c41e3a 203.7deg 213.4deg,
+    #1a1a1a 213.4deg 223.1deg,
+    #c41e3a 223.1deg 232.8deg,
+    #1a1a1a 232.8deg 242.5deg,
+    #c41e3a 242.5deg 252.2deg,
+    #1a1a1a 252.2deg 261.9deg,
+    #c41e3a 261.9deg 271.6deg,
+    #1a1a1a 271.6deg 281.3deg,
+    #c41e3a 281.3deg 291deg,
+    #1a1a1a 291deg 300.7deg,
+    #c41e3a 300.7deg 310.4deg,
+    #1a1a1a 310.4deg 320.1deg,
+    #c41e3a 320.1deg 329.8deg,
+    #1a1a1a 329.8deg 339.5deg,
+    #c41e3a 339.5deg 349.2deg,
+    #0d9f6e 349.2deg 360deg
+  );
+}
+
+.roulette-hub {
+  position: absolute;
+  inset: 38%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffd56a, #c47a00 70%);
+  color: #1a1208;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.roulette-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.6rem;
+  margin-left: -0.8rem;
+  margin-top: -42%;
+  font-size: 0.7rem;
+  text-align: center;
+  transform-origin: 50% 210%;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.roulette-result {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid var(--line);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  animation: bj-win-burst 0.7s ease both;
+}
+
+.roulette-result-celebrate {
+  background:
+    radial-gradient(280px 140px at 50% 0%, rgba(240, 162, 2, 0.25), transparent),
+    rgba(7, 16, 14, 0.75);
+}
+
+.roulette-confetti {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, #f0a202 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 20%, #2dd4bf 0 3px, transparent 4px),
+    radial-gradient(circle at 40% 70%, #fb7185 0 3px, transparent 4px),
+    radial-gradient(circle at 85% 60%, #ffd56a 0 3px, transparent 4px),
+    radial-gradient(circle at 15% 80%, #60a5fa 0 2px, transparent 3px);
+  animation: confetti-fall 1.4s ease-out both;
+  opacity: 0.85;
+}
+
+@keyframes confetti-fall {
+  from {
+    transform: translateY(-12px) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 0.85;
+  }
+}
+
+.bingo-ball-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bingo-ball {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.75rem;
+  background: radial-gradient(circle at 35% 30%, #fff8e7, #f0a202 55%, #a65d00);
+  color: #1a1208;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.bingo-ball-pop {
+  animation: pop 0.35s ease both;
+}
+
+.bingo-card {
+  border-radius: 1.25rem;
+  border: 1px solid var(--line);
+  background: rgba(7, 16, 14, 0.7);
+  padding: 0.75rem;
+}
+
+.bingo-card-line {
+  border-color: color-mix(in srgb, var(--teal) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--teal) 25%, transparent);
+}
+
+.bingo-card-win {
+  border-color: var(--amber);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--amber) 35%, transparent);
+  animation: premium-pulse 1.4s ease infinite;
+}
+
+.bingo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.3rem;
+}
+
+.bingo-grid span {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 0.55rem;
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.bingo-cell-on {
+  background: color-mix(in srgb, var(--teal) 35%, transparent) !important;
+  border-color: var(--teal) !important;
+  color: var(--ink-strong);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--teal) 40%, transparent);
+}
+
+.bingo-flash {
+  animation: bj-win-burst 0.6s ease both;
+}
+
+.profile-banner {
+  min-height: 10.5rem;
+  border-radius: 1.75rem;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  position: relative;
+}
+
+.profile-banner-inner {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.profile-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.profile-swatch {
+  aspect-ratio: 1;
+  border-radius: 1rem;
+  border: 2px solid transparent;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.profile-swatch-active {
+  border-color: var(--amber);
+  transform: scale(1.06);
+}
+
+.frame-gold {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 50%, transparent);
+}
+
+.frame-teal {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 50%, transparent);
+}
+
+.frame-rose {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 45%, transparent);
+}

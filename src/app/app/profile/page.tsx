@@ -22,6 +22,20 @@ function initials(name: string) {
     .join("");
 }
 
+function avatarDisplay(url: string | null | undefined, fallback: string) {
+  if (url?.startsWith("emoji:")) return url.slice(6);
+  return null;
+}
+
+const BANNER_PRESETS: Record<string, string> = {
+  "banner:casino": "linear-gradient(135deg,#1a1208,#3a2208 40%,#0b1512)",
+  "banner:teal": "linear-gradient(135deg,#0b1512,#134e4a 50%,#0f172a)",
+  "banner:night": "linear-gradient(135deg,#0f172a,#1e1b4b 55%,#0b1512)",
+  "banner:ember": "linear-gradient(135deg,#1c0a0a,#7c2d12 45%,#0b1512)",
+  "banner:gold": "linear-gradient(135deg,#2a1a00,#854d0e 40%,#0b1512)",
+  "banner:forest": "linear-gradient(135deg,#052e16,#14532d 50%,#0b1512)",
+};
+
 export default async function ProfilePage({
   searchParams,
 }: {
@@ -99,19 +113,41 @@ export default async function ProfilePage({
     emoji: string;
   } | null;
 
+  const emojiAvatar = avatarDisplay(profile.avatar_url, profile.display_name);
+  const bannerKey = profile.banner_url ?? "";
+  const bannerCss = BANNER_PRESETS[bannerKey]
+    ?? (bannerKey.startsWith("http")
+      ? `center/cover url(${bannerKey})`
+      : "linear-gradient(145deg, rgba(45,212,191,0.2), rgba(240,162,2,0.14)), radial-gradient(500px 220px at 100% 0%, rgba(255,213,106,0.28), transparent)");
+  const frame = profile.equipped_cosmetics?.frame ?? "gold";
+  const frameClass =
+    frame === "teal" ? "frame-teal" : frame === "rose" ? "frame-rose" : frame === "none" ? "" : "frame-gold";
+  const rival = (chemistry ?? [])[0];
+  const rivalId = rival ? (rival.user_a === profile.id ? rival.user_b : rival.user_a) : null;
+  const rivalName = rivalId ? fname.get(rivalId) : null;
+
+  const titleOptions = (titles ?? []).map((t) => {
+    const def = t.title_definitions as unknown as { name: string; emoji: string } | null;
+    return {
+      code: t.title_code,
+      name: def?.name ?? t.title_code,
+      emoji: def?.emoji ?? "🏅",
+    };
+  });
+
   return (
     <section className="animate-rise space-y-5">
-      {/* Avatar card — FIFA / Brawl style */}
-      <div
-        className="relative overflow-hidden rounded-3xl border border-[var(--line)] p-5"
-        style={{
-          background:
-            "linear-gradient(145deg, rgba(45,212,191,0.2), rgba(240,162,2,0.14)), radial-gradient(500px 220px at 100% 0%, rgba(255,213,106,0.28), transparent)",
-        }}
-      >
-        <div className="flex items-center gap-4">
-          <div className="avatar-ring avatar-ring-gold flex h-20 w-20 shrink-0 items-center justify-center font-display text-2xl">
-            {profile.avatar_url ? (
+      {/* Premium game-style profile card */}
+      <div className="profile-banner">
+        <div className="profile-banner-inner" style={{ background: bannerCss }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(7,16,14,0.95)] via-[rgba(7,16,14,0.35)] to-transparent" />
+        <div className="relative flex items-end gap-4 p-5 pt-16">
+          <div
+            className={`avatar-ring avatar-ring-gold flex h-20 w-20 shrink-0 items-center justify-center font-display text-3xl ${frameClass}`}
+          >
+            {emojiAvatar ? (
+              emojiAvatar
+            ) : profile.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile.avatar_url}
@@ -122,22 +158,25 @@ export default async function ProfilePage({
               initials(profile.display_name)
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Perfil</p>
+          <div className="min-w-0 flex-1 pb-1">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--amber)]">
+              {profile.title ?? "Novato"}
+              {personaDef ? ` · ${personaDef.emoji} ${personaDef.name}` : ""}
+            </p>
             <h1 className="truncate font-display text-3xl text-[var(--ink-strong)]">
               {profile.display_name}
             </h1>
-            <p className="text-[var(--amber)]">
-              {profile.title ?? "Novato"}
-              {personaDef ? ` · ${personaDef.emoji} ${personaDef.name}` : ""}
+            <p className="text-xs text-[var(--muted)]">
+              Nv.{progress.level}
               {profile.prestige_level
                 ? ` · 👑 Prestigio ${["", "I", "II", "III", "IV", "V"][Math.min(profile.prestige_level, 5)]}`
                 : ""}
+              {rivalName ? ` · Rival · ${rivalName}` : ""}
             </p>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="relative grid grid-cols-3 gap-2 px-5 pb-5">
           <div className="stat-chip text-center">
             <p className="text-[9px] uppercase text-[var(--muted)]">Nivel</p>
             <p className="font-display text-2xl">{progress.level}</p>
@@ -154,7 +193,7 @@ export default async function ProfilePage({
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="relative px-5 pb-5">
           <XpBar ratio={progress.ratio} size="md" accent="teal" label={`${profile.xp} XP`} />
         </div>
       </div>
@@ -162,11 +201,12 @@ export default async function ProfilePage({
       <StreakStrip streaks={streakRows ?? []} />
 
       <div className="surface p-4">
-        <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Medallas</p>
+        <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Medallas · Trofeos</p>
         <div className="mt-2 flex gap-4 font-display text-3xl">
           <span>🥇 {(medals ?? []).filter((m) => m.place === 1).length}</span>
           <span>🥈 {(medals ?? []).filter((m) => m.place === 2).length}</span>
           <span>🥉 {(medals ?? []).filter((m) => m.place === 3).length}</span>
+          <span>🏆 {(trophies ?? []).length}</span>
         </div>
       </div>
 
@@ -371,10 +411,15 @@ export default async function ProfilePage({
           ),
           games: (
             <div className="surface space-y-3 p-5 text-center">
-              <h2 className="font-display text-xl">Juegos</h2>
-              <p className="text-sm text-[var(--muted)]">Peaje, Rey y Duelo.</p>
+              <h2 className="font-display text-xl">Juegos & Casino</h2>
+              <p className="text-sm text-[var(--muted)]">
+                Sociales sin fichas · DrinkCasino con apuestas.
+              </p>
               <Link href="/app/games" className="btn-primary min-h-12 w-full">
-                Jugar ahora
+                🎮 Juegos
+              </Link>
+              <Link href="/app/casino" className="mega-cta !min-h-12 w-full !text-base">
+                🎰 DrinkCasino
               </Link>
             </div>
           ),
@@ -447,7 +492,7 @@ export default async function ProfilePage({
         </div>
       </div>
 
-      <ProfileEditor profile={profile} />
+      <ProfileEditor profile={profile} titles={titleOptions} />
 
       <div className="grid grid-cols-2 gap-3">
         <Link href="/app/stats" className="surface min-h-16 p-4 text-center">
@@ -456,11 +501,11 @@ export default async function ProfilePage({
         <Link href="/app/achievements" className="surface min-h-16 p-4 text-center">
           <p className="font-display text-lg">Logros</p>
         </Link>
-        <Link href="/app/album" className="surface min-h-16 p-4 text-center">
-          <p className="font-display text-lg">Álbum</p>
+        <Link href="/app/legacy" className="surface min-h-16 p-4 text-center">
+          <p className="font-display text-lg">Legado</p>
         </Link>
-        <Link href="/app/museum" className="surface min-h-16 p-4 text-center">
-          <p className="font-display text-lg">Museo</p>
+        <Link href="/app/casino" className="surface min-h-16 p-4 text-center">
+          <p className="font-display text-lg">DrinkCasino</p>
         </Link>
       </div>
     </section>

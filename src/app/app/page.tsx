@@ -309,7 +309,8 @@ export default async function AppHomePage() {
         {[
           { href: "/app/battle-pass", title: "Pase", sub: "Recompensas" },
           { href: "/app/objectives", title: "Objetivos", sub: "Misiones" },
-          { href: "/app/games", title: "Juegos", sub: "Peaje · Rey · Duelo" },
+          { href: "/app/games", title: "Juegos", sub: "Peaje · Rey · Ruleta" },
+          { href: "/app/casino", title: "DrinkCasino", sub: "BJ · Caballos · Bingo" },
           { href: "/app/bets", title: "DrinkBets", sub: "Apuestas vivas" },
           { href: "/app/achievements", title: "Logros", sub: "Secretos" },
           { href: "/app/album", title: "Álbum", sub: "Temporadas" },

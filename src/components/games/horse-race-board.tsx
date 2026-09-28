@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { runCarreraAction } from "@/app/actions";
+import { runCarreraAction, startGameAction } from "@/app/actions";
 
 export type Horse = {
   seat: number;
@@ -224,13 +224,50 @@ export function CarreraPlay({
               </li>
             ))}
           </ol>
-          <button
-            type="button"
-            className="btn-primary mt-3 min-h-12 w-full"
-            onClick={() => router.push("/app/games")}
-          >
-            🏠 Salir
-          </button>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={pending}
+              className="mega-cta !min-h-12 !text-base"
+              onClick={() => {
+                setError(null);
+                startTransition(async () => {
+                  try {
+                    const fd = new FormData();
+                    fd.set("game_type", "carrera");
+                    fd.set("stake", String(live.stake || 100));
+                    const horses = (live.horses ?? live.standings ?? []).map((h) => ({
+                      name: h.name,
+                      user_id: h.user_id ?? null,
+                    }));
+                    fd.set("players", JSON.stringify(horses));
+                    const r = await startGameAction(fd);
+                    if (r?.error) {
+                      setError(r.error);
+                      return;
+                    }
+                    const nextId = (r?.payload as { sessionId?: string } | undefined)?.sessionId;
+                    if (!nextId) {
+                      setError("No se pudo abrir la nueva carrera.");
+                      return;
+                    }
+                    window.location.assign(`/app/games/play?id=${encodeURIComponent(nextId)}`);
+                  } catch {
+                    setError("No se pudo iniciar otra carrera.");
+                  }
+                });
+              }}
+            >
+              {pending ? "…" : "🔄 Nueva Carrera"}
+            </button>
+            <button
+              type="button"
+              className="btn-primary min-h-12 w-full"
+              onClick={() => router.push("/app/casino")}
+            >
+              🚪 Salir
+            </button>
+          </div>
         </div>
       ) : (
         <p className="text-center text-xs text-[var(--muted)]">Carrera en curso…</p>

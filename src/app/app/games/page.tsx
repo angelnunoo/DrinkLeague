@@ -3,21 +3,15 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { StartGameForm } from "@/components/start-game-form";
+import { SocialRoulette } from "@/components/games/social-roulette";
 
 type GameStat = {
   game_type: string;
   played?: number;
   won?: number;
   lost?: number;
-  draws?: number;
-  blackjacks?: number;
   best_streak?: number;
   xp_earned?: number;
-  tokens_earned?: number;
-  tokens_wagered?: number;
-  tokens_won?: number;
-  tokens_lost?: number;
-  podiums?: number;
   kings_found?: number;
 };
 
@@ -25,8 +19,7 @@ const GAME_LABELS: Record<string, string> = {
   peaje: "Peaje",
   rey: "Rey",
   duelo: "Duelo",
-  blackjack: "BlackJack",
-  carrera: "Carrera",
+  ruleta_social: "Ruleta DrinkLeague",
 };
 
 export default async function GamesPage({
@@ -39,18 +32,19 @@ export default async function GamesPage({
   const sp = await searchParams;
 
   const supabase = await createClient();
-  const [
-    { data: recent },
-    { data: gameStats },
-    { data: friendships },
-  ] = await Promise.all([
+  const [{ data: recent }, { data: gameStats }, { data: friendships }] = await Promise.all([
     supabase
       .from("game_sessions")
       .select("id, game_type, status, created_at, state")
       .eq("created_by", profile.id)
+      .in("game_type", ["peaje", "rey", "duelo", "ruleta_social"])
       .order("created_at", { ascending: false })
       .limit(12),
-    supabase.from("user_game_stats").select("*").eq("user_id", profile.id),
+    supabase
+      .from("user_game_stats")
+      .select("*")
+      .eq("user_id", profile.id)
+      .in("game_type", ["peaje", "rey", "duelo", "ruleta_social"]),
     supabase
       .from("friendships")
       .select("user_a, user_b")
@@ -76,19 +70,27 @@ export default async function GamesPage({
   const statsMap = new Map(
     ((gameStats ?? []) as GameStat[]).map((s) => [s.game_type, s]),
   );
-  const tokens = Number(profile.token_balance ?? 0);
 
   return (
     <section className="animate-rise space-y-6">
       <div>
         <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-          Casino · Hipódromo
+          Social · Sin fichas obligatorias
         </p>
         <h1 className="font-display text-3xl">Juegos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Riesgo y recompensa · {tokens.toLocaleString("es-ES")} ★ disponibles
+          Peaje · Rey · Duelo · Ruleta DrinkLeague
         </p>
       </div>
+
+      <Link
+        href="/app/casino"
+        className="casino-hero block overflow-hidden rounded-3xl border border-[var(--line)] p-4 transition active:scale-[0.99]"
+      >
+        <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--amber)]">Premium</p>
+        <p className="font-display text-2xl">🎰 DrinkCasino</p>
+        <p className="text-xs text-[var(--muted)]">BlackJack · Caballos · Ruleta · Bingo</p>
+      </Link>
 
       {sp.error ? (
         <p className="rounded-2xl bg-[color-mix(in_srgb,var(--danger)_15%,transparent)] px-4 py-3 text-sm text-[var(--danger)]">
@@ -96,8 +98,8 @@ export default async function GamesPage({
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(["carrera", "blackjack", "peaje", "rey", "duelo"] as const).map((g) => {
+      <div className="grid gap-3 sm:grid-cols-2">
+        {(["peaje", "rey", "duelo", "ruleta_social"] as const).map((g) => {
           const s = statsMap.get(g);
           return (
             <div key={g} className="surface space-y-2 p-4">
@@ -126,12 +128,6 @@ export default async function GamesPage({
               </div>
               <p className="text-[10px] text-[var(--muted)]">
                 XP {Number(s?.xp_earned ?? 0)}
-                {g === "blackjack"
-                  ? ` · 🃏 ${s?.blackjacks ?? 0} · ★${Number(s?.tokens_won ?? 0)}/−${Number(s?.tokens_lost ?? 0)}`
-                  : ""}
-                {g === "carrera"
-                  ? ` · 🏅 ${s?.podiums ?? 0} · ★${Number(s?.tokens_won ?? 0)}/−${Number(s?.tokens_lost ?? 0)}`
-                  : ""}
                 {g === "rey" ? ` · 👑 ${s?.kings_found ?? 0}` : ""}
               </p>
             </div>
@@ -140,21 +136,6 @@ export default async function GamesPage({
       </div>
 
       <div className="grid gap-4">
-        <StartGameForm
-          gameType="carrera"
-          label="Carrera de Caballos"
-          blurb="2–4 jinetes. Apuesta al bote. El primero en meta se lo lleva."
-          friends={friendUsers ?? []}
-          meName={profile.display_name}
-          meId={profile.id}
-          tokenBalance={tokens}
-        />
-        <StartGameForm
-          gameType="blackjack"
-          label="BlackJack"
-          blurb="Apuesta fichas. Gana ×2, BlackJack ×2.5, empate recuperas."
-          tokenBalance={tokens}
-        />
         <StartGameForm
           gameType="peaje"
           label="Peaje"
@@ -172,6 +153,7 @@ export default async function GamesPage({
           needsOpponent
           friends={friendUsers ?? []}
         />
+        <SocialRoulette />
       </div>
 
       <div className="surface p-5">

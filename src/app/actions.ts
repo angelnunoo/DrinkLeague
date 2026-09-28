@@ -343,11 +343,31 @@ export async function updateProfileAction(formData: FormData): Promise<ActionRes
   } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado." };
 
+  const avatarRaw = String(formData.get("avatar_url") ?? "").trim();
+  const bannerRaw = String(formData.get("banner_url") ?? "").trim();
+  const frameRaw = String(formData.get("frame") ?? "").trim();
+  const bgRaw = String(formData.get("bg") ?? "").trim();
+  const titleCode = String(formData.get("equipped_title_code") ?? "").trim();
+
+  const { data: current } = await supabase
+    .from("users")
+    .select("equipped_cosmetics")
+    .eq("id", user.id)
+    .maybeSingle();
+  const cosmetics = {
+    ...((current?.equipped_cosmetics as Record<string, string> | null) ?? {}),
+  };
+  if (frameRaw) cosmetics.frame = frameRaw.slice(0, 40);
+  if (bgRaw) cosmetics.bg = bgRaw.slice(0, 40);
+
   const { error } = await supabase
     .from("users")
     .update({
       display_name: displayName.slice(0, 40),
       ...(birthDate ? { birth_date: birthDate } : {}),
+      ...(avatarRaw ? { avatar_url: avatarRaw.slice(0, 200) } : {}),
+      ...(bannerRaw ? { banner_url: bannerRaw.slice(0, 200) } : {}),
+      equipped_cosmetics: cosmetics,
     })
     .eq("id", user.id);
 
@@ -356,6 +376,11 @@ export async function updateProfileAction(formData: FormData): Promise<ActionRes
   if (birthDate) {
     const { error: bdErr } = await supabase.rpc("update_birth_date", { p_date: birthDate });
     if (bdErr) return { error: friendlyLeagueError(bdErr.message) };
+  }
+
+  if (titleCode) {
+    const { error: titleErr } = await supabase.rpc("equip_title", { p_code: titleCode });
+    if (titleErr) return { error: friendlyLeagueError(titleErr.message) };
   }
 
   return { success: true, message: "Perfil actualizado." };
@@ -1249,4 +1274,60 @@ export async function updateNotificationPrefsAction(
   const { error } = await supabase.rpc("update_notification_prefs", { p_prefs: prefs });
   if (error) return { error: friendlyLeagueError(error.message) };
   return { success: true, message: "Preferencias guardadas." };
+}
+
+export async function spinSocialRouletteAction(): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("spin_social_roulette");
+    if (error) return { error: friendlyLeagueError(error.message) || error.message };
+    return { success: true, payload: data as Record<string, unknown> };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "No se pudo girar." };
+  }
+}
+
+export async function spinCasinoRouletteAction(
+  stake: number,
+  bet: "red" | "black" | "green",
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("spin_casino_roulette", {
+      p_stake: stake,
+      p_bet: bet,
+    });
+    if (error) return { error: friendlyLeagueError(error.message) || error.message };
+    return { success: true, payload: data as Record<string, unknown> };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "No se pudo girar." };
+  }
+}
+
+export async function playBingoAction(
+  stake: number,
+  players: Array<{ name: string; user_id?: string | null }>,
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("play_bingo", {
+      p_stake: stake,
+      p_players: players,
+    });
+    if (error) return { error: friendlyLeagueError(error.message) || error.message };
+    return { success: true, payload: data as Record<string, unknown> };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "No se pudo jugar bingo." };
+  }
+}
+
+export async function getCasinoHubAction(): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_casino_hub");
+    if (error) return { error: friendlyLeagueError(error.message) || error.message };
+    return { success: true, payload: data as Record<string, unknown> };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "No se pudo cargar el casino." };
+  }
 }

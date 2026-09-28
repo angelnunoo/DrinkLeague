@@ -110,6 +110,7 @@ export default async function GamePlayPage({
 
   const state = (session.state ?? {}) as Record<string, unknown>;
   const type = session.game_type;
+  const isCasino = type === "blackjack" || type === "carrera";
   const shell =
     type === "rey"
       ? "game-card-rey"
@@ -144,8 +145,11 @@ export default async function GamePlayPage({
   return (
     <section className="animate-rise space-y-5">
       <div>
-        <Link href="/app/games" className="text-sm text-[var(--muted)] hover:text-[var(--ink)]">
-          ← Juegos
+        <Link
+          href={isCasino ? "/app/casino" : "/app/games"}
+          className="text-sm text-[var(--muted)] hover:text-[var(--ink)]"
+        >
+          ← {isCasino ? "DrinkCasino" : "Juegos"}
         </Link>
         <h1 className="mt-2 font-display text-3xl">{title}</h1>
         <p className="text-sm text-[var(--muted)]">
@@ -286,9 +290,14 @@ function MissingGame({ message }: { message: string }) {
       </p>
       <h1 className="font-display text-3xl">No se pudo abrir la partida</h1>
       <p className="max-w-sm text-sm text-[var(--muted)]">{message}</p>
-      <Link href="/app/games" className="btn-primary min-h-12 px-8">
-        Volver a Juegos
-      </Link>
+      <div className="flex w-full max-w-sm flex-col gap-2">
+        <Link href="/app/games" className="btn-primary min-h-12 px-8">
+          Volver a Juegos
+        </Link>
+        <Link href="/app/casino" className="btn-ghost min-h-12 px-8">
+          DrinkCasino
+        </Link>
+      </div>
     </section>
   );
 }

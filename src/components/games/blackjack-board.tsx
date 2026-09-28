@@ -221,10 +221,10 @@ export function BlackjackPlay({
             <button
               type="button"
               disabled={pending}
-              onClick={() => router.push("/app/games")}
+              onClick={() => router.push("/app/casino")}
               className="btn-primary min-h-14 text-base"
             >
-              🏠 Salir
+              🚪 Salir
             </button>
           </div>
         </div>
