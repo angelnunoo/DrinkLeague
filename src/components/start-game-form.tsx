@@ -80,8 +80,8 @@ export function StartGameForm({
         setPending(false);
         return;
       }
-      // Hard navigation — more reliable than router.push after server actions on mobile PWAs
-      window.location.assign(`/app/games/${sessionId}`);
+      // Stable route (avoids Netlify 404 on /app/games/[uuid])
+      window.location.assign(`/app/games/play?id=${encodeURIComponent(sessionId)}`);
     } catch {
       setError("No se pudo abrir la partida. Inténtalo de nuevo.");
       setPending(false);

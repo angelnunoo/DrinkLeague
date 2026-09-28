@@ -529,7 +529,7 @@ async function notifyGameMilestone(sessionId: string) {
         p_category: "games",
         p_title: "⚔️ Nueva mejor racha en Duelo.",
         p_body: `Racha de ${streak} en Duelo.`,
-        p_href: `/app/games/${sessionId}`,
+        p_href: `/app/games/play?id=${sessionId}`,
         p_payload: { session_id: sessionId, streak },
       });
     }
@@ -540,7 +540,7 @@ async function notifyGameMilestone(sessionId: string) {
       p_category: "games",
       p_title: "🚧 Has completado un Peaje perfecto.",
       p_body: "Tirada limpia en Peaje.",
-      p_href: `/app/games/${sessionId}`,
+      p_href: `/app/games/play?id=${sessionId}`,
       p_payload: { session_id: sessionId },
     });
   }
@@ -552,7 +552,7 @@ async function notifyGameMilestone(sessionId: string) {
         p_category: "games",
         p_title: `👑 Has encontrado tu Rey número ${kings}.`,
         p_body: "Hito de Rey desbloqueado.",
-        p_href: `/app/games/${sessionId}`,
+        p_href: `/app/games/play?id=${sessionId}`,
         p_payload: { session_id: sessionId, kings },
       });
     }

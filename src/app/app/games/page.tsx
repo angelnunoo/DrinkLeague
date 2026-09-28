@@ -131,7 +131,7 @@ export default async function GamesPage({
           {(recent ?? []).map((g) => (
             <li key={g.id}>
               <Link
-                href={`/app/games/${g.id}`}
+                href={`/app/games/play?id=${encodeURIComponent(g.id)}`}
                 className="rank-row flex min-h-12 items-center justify-between px-4 py-3 transition hover:border-[var(--teal)]"
               >
                 <span className="font-semibold capitalize">{g.game_type}</span>
