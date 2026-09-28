@@ -14,7 +14,7 @@ const RULES: Record<string, string[]> = {
     "Carta 1–2: Par o Impar",
     "Carta 3: Peaje obligatorio",
     "Carta 4–5: Mayor o Menor",
-    "Final: adivina el palo",
+    "Si fallas → bebes y un paso atrás",
   ],
   rey: [
     "Baraja española de 40 cartas",

@@ -154,6 +154,11 @@ export default async function GamePlayPage({
               perfect: typeof state.perfect === "boolean" ? state.perfect : undefined,
               xp: state.xp != null ? Number(state.xp) : undefined,
               tokens: state.tokens != null ? Number(state.tokens) : undefined,
+              went_back: state.went_back === true,
+              prev_rank:
+                state.prev_rank != null && state.prev_rank !== ""
+                  ? Number(state.prev_rank)
+                  : null,
             }}
           />
         ) : null}

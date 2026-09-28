@@ -18,11 +18,21 @@ export const RANK_LABELS: Record<number, string> = {
   10: "Rey",
 };
 
-export const SUIT_META: Record<string, { label: string; symbol: string; color: string }> = {
-  oros: { label: "Oros", symbol: "🪙", color: "#f0a202" },
-  copas: { label: "Copas", symbol: "🍷", color: "#fb7185" },
-  espadas: { label: "Espadas", symbol: "⚔️", color: "#7dd3fc" },
-  bastos: { label: "Bastos", symbol: "🪵", color: "#86efac" },
+export const SUIT_META: Record<
+  string,
+  { label: string; symbol: string; color: string; pip: string }
+> = {
+  oros: { label: "Oros", symbol: "🪙", color: "#c9920a", pip: "●" },
+  copas: { label: "Copas", symbol: "🍷", color: "#c43b55", pip: "♥" },
+  espadas: { label: "Espadas", symbol: "⚔️", color: "#2f6fed", pip: "♠" },
+  bastos: { label: "Bastos", symbol: "🪵", color: "#2f9e5b", pip: "♣" },
+};
+
+const FIGURE_ART: Record<number, string> = {
+  1: "🅰️",
+  8: "🗡️",
+  9: "🐴",
+  10: "👑",
 };
 
 export function cardTitle(card: SpanishCard | null | undefined) {
@@ -31,6 +41,34 @@ export function cardTitle(card: SpanishCard | null | undefined) {
   const rank = RANK_LABELS[card.rank] ?? String(card.rank);
   const suit = SUIT_META[card.suit]?.label ?? card.suit;
   return `${rank} de ${suit}`;
+}
+
+function PipGrid({ rank, color, pip }: { rank: number; color: string; pip: string }) {
+  const count = Math.min(Math.max(rank, 1), 7);
+  const slots =
+    count === 1
+      ? ["c"]
+      : count === 2
+        ? ["t", "b"]
+        : count === 3
+          ? ["t", "c", "b"]
+          : count === 4
+            ? ["tl", "tr", "bl", "br"]
+            : count === 5
+              ? ["tl", "tr", "c", "bl", "br"]
+              : count === 6
+                ? ["tl", "tr", "ml", "mr", "bl", "br"]
+                : ["tl", "tr", "ml", "c", "mr", "bl", "br"];
+
+  return (
+    <div className="spanish-pips" aria-hidden>
+      {slots.map((pos, i) => (
+        <span key={`${pos}-${i}`} className={`pip pip-${pos}`} style={{ color }}>
+          {pip}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export function SpanishPlayingCard({
@@ -43,35 +81,55 @@ export function SpanishPlayingCard({
   faceDown?: boolean;
 }) {
   const dims =
-    size === "lg" ? "w-40 min-h-[14rem]" : size === "sm" ? "w-24 min-h-[9rem]" : "w-32 min-h-[12rem]";
+    size === "lg" ? "w-44 min-h-[16rem]" : size === "sm" ? "w-24 min-h-[9rem]" : "w-36 min-h-[13rem]";
   const suit = card ? SUIT_META[card.suit] : null;
+  const isFigure = card ? card.rank === 1 || card.rank >= 8 : false;
 
   if (faceDown || !card) {
     return (
-      <div
-        className={`playing-card ${dims} border-[var(--amber)]`}
-        style={{
-          background:
-            "repeating-linear-gradient(45deg, #1a2e28, #1a2e28 8px, #12241f 8px, #12241f 16px)",
-        }}
-      >
-        <p className="font-display text-3xl text-[var(--amber)]">🍺</p>
+      <div className={`playing-card playing-card-back ${dims}`}>
+        <div className="playing-card-back-inner">
+          <p className="text-4xl">🍺</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--amber)]">
+            DrinkLeague
+          </p>
+        </div>
       </div>
     );
   }
 
+  const color = suit?.color ?? "#888";
+  const pip = suit?.pip ?? "•";
+  const corner = RANK_LABELS[card.rank] ?? String(card.rank);
+
   return (
     <div
-      className={`playing-card ${dims} animate-pop`}
-      style={{ borderColor: suit?.color ?? "var(--line)" }}
+      className={`playing-card playing-card-face ${dims} animate-pop`}
+      style={{ borderColor: color }}
     >
-      <p className="text-xs font-bold uppercase tracking-wider" style={{ color: suit?.color }}>
-        {suit?.symbol} {suit?.label}
-      </p>
-      <p className="mt-2 font-display text-4xl text-[var(--ink-strong)] sm:text-5xl">
-        {RANK_LABELS[card.rank] ?? card.name ?? card.rank}
-      </p>
-      <p className="mt-2 px-2 text-center text-[10px] text-[var(--muted)]">{cardTitle(card)}</p>
+      <div className="card-corner card-corner-tl" style={{ color }}>
+        <span className="card-corner-rank">{corner}</span>
+        <span className="card-corner-suit">{suit?.symbol}</span>
+      </div>
+
+      <div className="card-face-center">
+        {isFigure ? (
+          <div className="card-figure" style={{ color }}>
+            <p className="card-figure-art">{FIGURE_ART[card.rank] ?? suit?.symbol}</p>
+            <p className="card-figure-name">{RANK_LABELS[card.rank]}</p>
+            <p className="card-figure-suit">
+              {suit?.symbol} {suit?.label}
+            </p>
+          </div>
+        ) : (
+          <PipGrid rank={card.rank} color={color} pip={pip} />
+        )}
+      </div>
+
+      <div className="card-corner card-corner-br" style={{ color }}>
+        <span className="card-corner-rank">{corner}</span>
+        <span className="card-corner-suit">{suit?.symbol}</span>
+      </div>
     </div>
   );
 }

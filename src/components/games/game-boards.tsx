@@ -17,6 +17,8 @@ type PeajeState = {
   perfect?: boolean;
   xp?: number;
   tokens?: number;
+  went_back?: boolean;
+  prev_rank?: number | null;
 };
 
 export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: PeajeState }) {
@@ -45,8 +47,13 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
   if (phase === "intro") {
     return (
       <div className="space-y-4 text-center">
+        <div className="flex justify-center gap-2 py-2">
+          <SpanishPlayingCard faceDown size="sm" />
+          <SpanishPlayingCard faceDown size="sm" />
+          <SpanishPlayingCard faceDown size="sm" />
+        </div>
         <p className="text-sm text-[var(--muted)]">
-          6 cartas españolas. Acierta Par/Impar, supera el peaje, Mayor/Menor y el palo final.
+          6 cartas españolas. Si fallas, bebes y <strong className="text-[var(--ink)]">vuelves un paso atrás</strong>.
         </p>
         <ol className="space-y-2 text-left text-sm text-[var(--muted)]">
           <li>1–2 · Par o Impar</li>
@@ -100,10 +107,12 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
         : step === 2
           ? "Carta 3: Peaje obligatorio"
           : step === 3
-            ? "Carta 4: ¿Mayor o Menor?"
+            ? `Carta 4: ¿Mayor o Menor${initial.prev_rank != null ? ` que ${RANK_LABELS[initial.prev_rank] ?? initial.prev_rank}` : ""}?`
             : step === 4
-              ? "Carta 5: ¿Mayor o Menor?"
+              ? `Carta 5: ¿Mayor o Menor${initial.prev_rank != null ? ` que ${RANK_LABELS[initial.prev_rank] ?? initial.prev_rank}` : ""}?`
               : "Carta final: ¿Palo?";
+
+  const justMissed = initial.last_result === "miss";
 
   return (
     <div className="space-y-5">
@@ -122,6 +131,22 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
         </div>
       </div>
 
+      {/* Road progress */}
+      <div className="flex items-center justify-center gap-1.5 px-2">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className={`h-2.5 flex-1 rounded-full transition ${
+              i < step
+                ? "bg-[var(--teal)]"
+                : i === step
+                  ? "bg-[var(--amber)]"
+                  : "bg-[color-mix(in_srgb,var(--line)_80%,transparent)]"
+            }`}
+          />
+        ))}
+      </div>
+
       {initial.last_card ? (
         <div className="space-y-2 text-center">
           <SpanishPlayingCard card={initial.last_card} size="lg" />
@@ -129,20 +154,23 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
             className={`text-sm font-semibold ${
               initial.last_result === "hit"
                 ? "text-[var(--teal)]"
-                : initial.last_result === "miss"
+                : justMissed
                   ? "text-[var(--danger)]"
                   : "text-[var(--amber)]"
             }`}
           >
             {initial.last_result === "hit"
-              ? "✅ Acierto"
-              : initial.last_result === "miss"
-                ? "❌ Fallo"
-                : "🍺 Peaje"}
+              ? "✅ Acierto · avanzas"
+              : justMissed
+                ? "❌ Fallo · bebes y un paso atrás"
+                : "🍺 Peaje · bebes y sigues"}
           </p>
         </div>
       ) : (
-        <SpanishPlayingCard faceDown size="lg" />
+        <div className="space-y-2 text-center">
+          <SpanishPlayingCard faceDown size="lg" />
+          <p className="text-xs text-[var(--muted)]">Carta oculta</p>
+        </div>
       )}
 
       <p className="text-center font-display text-xl">{prompt}</p>
@@ -159,8 +187,8 @@ export function PeajePlay({ sessionId, initial }: { sessionId: string; initial: 
         ) : null}
         {step === 3 || step === 4 ? (
           <>
-            <GuessBtn disabled={pending} onClick={() => run("higher")} label="Mayor" />
-            <GuessBtn disabled={pending} onClick={() => run("lower")} label="Menor" />
+            <GuessBtn disabled={pending} onClick={() => run("higher")} label="Mayor ↑" />
+            <GuessBtn disabled={pending} onClick={() => run("lower")} label="Menor ↓" />
           </>
         ) : null}
         {step === 5
@@ -210,24 +238,21 @@ function HistoryList({
 }) {
   if (!history?.length) return null;
   return (
-    <ul className="space-y-2 text-left text-sm">
-      {history.map((h, i) => (
-        <li key={i} className="rank-row flex justify-between px-3 py-2">
-          <span>
-            #{h.step + 1} {RANK_LABELS[h.card?.rank] ?? "?"}{" "}
-            {SUIT_META[h.card?.suit]?.symbol ?? ""}
-          </span>
-          <span
-            className={
+    <ul className="flex gap-2 overflow-x-auto pb-1 pt-2">
+      {history.slice(-6).map((h, i) => (
+        <li key={i} className="shrink-0 text-center">
+          <SpanishPlayingCard card={h.card} size="sm" />
+          <p
+            className={`mt-1 text-[10px] font-semibold ${
               h.result === "hit"
                 ? "text-[var(--teal)]"
                 : h.result === "miss"
                   ? "text-[var(--danger)]"
                   : "text-[var(--amber)]"
-            }
+            }`}
           >
-            {h.result}
-          </span>
+            {h.result === "hit" ? "OK" : h.result === "miss" ? "Atrás" : "Peaje"}
+          </p>
         </li>
       ))}
     </ul>
