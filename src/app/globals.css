@@ -2362,6 +2362,18 @@ body {
   transform: translateY(-3px) scale(1.06);
 }
 
+.chip-drag-ghost {
+  position: fixed;
+  z-index: 300;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(1.12);
+  opacity: 0.95;
+  box-shadow:
+    0 8px 0 rgba(0, 0, 0, 0.35),
+    0 16px 28px rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
 .chip-white {
   background: radial-gradient(circle at 35% 30%, #fff, #d7d7d7 70%);
 }

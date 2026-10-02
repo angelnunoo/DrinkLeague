@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { spinCasinoRouletteAction } from "@/app/actions";
 
@@ -85,6 +85,14 @@ function sumChips(chips: ChipValue[]) {
   return chips.reduce((a, c) => a + c, 0);
 }
 
+function cloneSpots(spots: SpotChips): SpotChips {
+  return Object.fromEntries(Object.entries(spots).map(([k, v]) => [k, [...v]]));
+}
+
+function stakeOf(spots: SpotChips) {
+  return Object.values(spots).reduce((a, chips) => a + sumChips(chips), 0);
+}
+
 function ChipStack({ chips, flying }: { chips: ChipValue[]; flying?: boolean }) {
   const top = chips.slice(-4);
   if (!top.length) return null;
@@ -119,6 +127,7 @@ export function CasinoRoulette({
   const [pending, startTransition] = useTransition();
   const [selectedChip, setSelectedChip] = useState<ChipValue>(100);
   const [spots, setSpots] = useState<SpotChips>({});
+  const [lastSpots, setLastSpots] = useState<SpotChips>({});
   const [spinning, setSpinning] = useState(false);
   const [wheelRot, setWheelRot] = useState(0);
   const [ballRot, setBallRot] = useState(0);
@@ -128,13 +137,15 @@ export function CasinoRoulette({
   const [soundOn, setSoundOn] = useState(true);
   const [vibeOn, setVibeOn] = useState(true);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [dragChip, setDragChip] = useState<ChipValue | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const tickRef = useRef<number | null>(null);
+  const dragMoved = useRef(false);
 
   const bal = Number(tokenBalance ?? 0);
-  const totalStake = useMemo(
-    () => Object.values(spots).reduce((a, chips) => a + sumChips(chips), 0),
-    [spots],
-  );
+  const totalStake = useMemo(() => stakeOf(spots), [spots]);
+  const lastStake = useMemo(() => stakeOf(lastSpots), [lastSpots]);
+  const canRepeat = lastStake > 0 && lastStake <= bal;
 
   const conic = useMemo(
     () =>
@@ -184,6 +195,20 @@ export function CasinoRoulette({
     });
   }
 
+  function repeatBet() {
+    if (spinning || pending || !lastStake) return;
+    if (lastStake > bal) {
+      setError("💰 No tienes fichas suficientes para repetir esa apuesta.");
+      return;
+    }
+    setError(null);
+    setResult(null);
+    setPhase("bet");
+    setSpots(cloneSpots(lastSpots));
+    if (soundOn) playChipSound();
+    if (vibeOn) vibrate(18);
+  }
+
   function stopTicks() {
     if (tickRef.current != null) {
       window.clearInterval(tickRef.current);
@@ -205,6 +230,7 @@ export function CasinoRoulette({
       return;
     }
 
+    setLastSpots(cloneSpots(spots));
     setError(null);
     setResult(null);
     setSpinning(true);
@@ -277,9 +303,54 @@ export function CasinoRoulette({
     setError(null);
   }
 
+  function spotFromPoint(x: number, y: number): string | null {
+    const el = document.elementFromPoint(x, y);
+    const spotEl = el?.closest?.("[data-spot]") as HTMLElement | null;
+    return spotEl?.dataset.spot ?? null;
+  }
+
+  function beginChipDrag(e: React.PointerEvent, value: ChipValue) {
+    if (spinning || pending || phase === "spin") return;
+    e.preventDefault();
+    setSelectedChip(value);
+    setDragChip(value);
+    setDragPos({ x: e.clientX, y: e.clientY });
+    dragMoved.current = false;
+  }
+
+  useEffect(() => {
+    if (dragChip == null) return;
+
+    function onMove(e: PointerEvent) {
+      dragMoved.current = true;
+      setDragPos({ x: e.clientX, y: e.clientY });
+      setDragOver(spotFromPoint(e.clientX, e.clientY));
+    }
+
+    function onUp(e: PointerEvent) {
+      const value = dragChip;
+      const spot = spotFromPoint(e.clientX, e.clientY);
+      const moved = dragMoved.current;
+      setDragChip(null);
+      setDragPos(null);
+      setDragOver(null);
+      if (value != null && spot && moved) placeOnSpot(spot, value);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [dragChip]);
+
   function onDragStart(e: React.DragEvent, value: ChipValue) {
     e.dataTransfer.setData("text/chip", String(value));
     e.dataTransfer.effectAllowed = "copy";
+    setSelectedChip(value);
   }
 
   function onDropSpot(e: React.DragEvent, spot: string) {
@@ -292,7 +363,14 @@ export function CasinoRoulette({
 
   function spotHandlers(spot: string) {
     return {
-      onClick: () => placeOnSpot(spot),
+      "data-spot": spot,
+      onClick: () => {
+        if (dragMoved.current) {
+          dragMoved.current = false;
+          return;
+        }
+        placeOnSpot(spot);
+      },
       onDragOver: (e: React.DragEvent) => {
         e.preventDefault();
         setDragOver(spot);
@@ -317,6 +395,7 @@ export function CasinoRoulette({
   const net = Number(result?.tokens ?? 0);
   const colorEmoji =
     result?.color === "red" ? "🔴" : result?.color === "black" ? "⚫" : "🟢";
+  const dragTone = CHIPS.find((c) => c.value === dragChip)?.tone ?? "white";
 
   return (
     <div className="game-card game-card-ruleta-casino euro-roulette casino-table-wrap space-y-4">
@@ -325,7 +404,8 @@ export function CasinoRoulette({
       </p>
       <h2 className="font-display text-3xl text-[var(--ink-strong)]">Ruleta Casino</h2>
       <p className="text-sm text-[var(--muted)]">
-        Elige ficha · toca o arrastra a la mesa · {bal.toLocaleString("es-ES")} ★
+        Elige ficha · toca o arrastra a la mesa · sin límite (tu saldo) ·{" "}
+        {bal.toLocaleString("es-ES")} ★
       </p>
 
       <div className="flex justify-center gap-2">
@@ -390,7 +470,7 @@ export function CasinoRoulette({
         <>
           <div className="chip-tray">
             <p className="mb-2 text-center text-[10px] uppercase tracking-wider text-[var(--muted)]">
-              Fichas
+              Fichas · mantén y arrastra a la mesa
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               {CHIPS.map((c) => (
@@ -399,11 +479,13 @@ export function CasinoRoulette({
                   type="button"
                   draggable={!spinning}
                   onDragStart={(e) => onDragStart(e, c.value)}
+                  onPointerDown={(e) => beginChipDrag(e, c.value)}
                   onClick={() => setSelectedChip(c.value)}
                   className={`casino-chip chip-${c.tone} ${
                     selectedChip === c.value ? "chip-selected" : ""
                   }`}
                   aria-label={`Ficha ${c.value}`}
+                  style={{ touchAction: "none" }}
                 >
                   {c.label}
                 </button>
@@ -464,7 +546,7 @@ export function CasinoRoulette({
 
           {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <button
               type="button"
               disabled={spinning || pending || !totalStake}
@@ -480,6 +562,20 @@ export function CasinoRoulette({
               className="btn-ghost min-h-12 text-xs"
             >
               Limpiar
+            </button>
+            <button
+              type="button"
+              disabled={spinning || pending || !canRepeat}
+              onClick={repeatBet}
+              className="btn-ghost min-h-12 text-xs"
+              title={
+                lastStake
+                  ? `Repetir ${lastStake.toLocaleString("es-ES")} ★`
+                  : "Aún no hay apuesta previa"
+              }
+            >
+              Repetir
+              {lastStake ? ` · ${lastStake.toLocaleString("es-ES")}` : ""}
             </button>
             <button
               type="button"
@@ -515,18 +611,36 @@ export function CasinoRoulette({
           <p className="text-xs text-[var(--muted)]">
             Apostado {Number(result.stake ?? 0).toLocaleString("es-ES")} ★ · +{result.xp ?? 0} XP
           </p>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <button type="button" onClick={playAgain} className="mega-cta !min-h-14 !text-base">
-              Volver a jugar
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={repeatBet}
+              disabled={!canRepeat}
+              className="mega-cta !min-h-14 !text-base"
+            >
+              Repetir apuesta
+            </button>
+            <button type="button" onClick={playAgain} className="btn-primary min-h-14 text-base">
+              Nueva mesa
             </button>
             <button
               type="button"
               onClick={() => router.push("/app/casino")}
-              className="btn-primary min-h-14 text-base"
+              className="btn-ghost min-h-14 text-base"
             >
               Salir
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {dragChip != null && dragPos ? (
+        <div
+          className={`casino-chip chip-${dragTone} chip-drag-ghost`}
+          style={{ left: dragPos.x, top: dragPos.y }}
+          aria-hidden
+        >
+          {dragChip >= 1000 ? "1K" : dragChip}
         </div>
       ) : null}
 
