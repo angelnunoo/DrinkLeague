@@ -69,6 +69,7 @@ export default async function CasinoPage({
     { data: liveWins },
     { data: bigPrizes },
     { data: hotStreaks },
+    { data: ruletaRecentRaw },
   ] = await Promise.all([
     supabase.rpc("get_casino_hub"),
     supabase
@@ -102,7 +103,12 @@ export default async function CasinoPage({
       .gt("best_streak", 1)
       .order("best_streak", { ascending: false })
       .limit(5),
+    supabase.rpc("get_ruleta_recent_results", { p_limit: 10 }),
   ]);
+
+  const ruletaRecent = (Array.isArray(ruletaRecentRaw)
+    ? ruletaRecentRaw
+    : []) as Array<{ number: number; color: string; at?: string }>;
 
   const friendIds = [
     ...new Set(
@@ -384,7 +390,11 @@ export default async function CasinoPage({
               meId={profile.id}
               tokenBalance={tokens}
             />
-            <CasinoRoulette tokenBalance={tokens} stats={byType.get("ruleta_casino") ?? null} />
+            <CasinoRoulette
+              tokenBalance={tokens}
+              stats={byType.get("ruleta_casino") ?? null}
+              recentResults={ruletaRecent}
+            />
             <BingoBoard
               tokenBalance={tokens}
               friends={friendUsers}

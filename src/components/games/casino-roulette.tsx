@@ -119,9 +119,11 @@ function ChipStack({ chips, flying }: { chips: ChipValue[]; flying?: boolean }) 
 export function CasinoRoulette({
   tokenBalance,
   stats,
+  recentResults = [],
 }: {
   tokenBalance: number;
   stats?: RuletaStats | null;
+  recentResults?: Array<{ number: number; color: string; at?: string }>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -139,6 +141,7 @@ export function CasinoRoulette({
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragChip, setDragChip] = useState<ChipValue | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [recentNumbers, setRecentNumbers] = useState(recentResults);
   const tickRef = useRef<number | null>(null);
   const dragMoved = useRef(false);
 
@@ -146,6 +149,10 @@ export function CasinoRoulette({
   const totalStake = useMemo(() => stakeOf(spots), [spots]);
   const lastStake = useMemo(() => stakeOf(lastSpots), [lastSpots]);
   const canRepeat = lastStake > 0 && lastStake <= bal;
+
+  useEffect(() => {
+    setRecentNumbers(recentResults);
+  }, [recentResults]);
 
   const conic = useMemo(
     () =>
@@ -281,6 +288,16 @@ export function CasinoRoulette({
           setSpinning(false);
           const won = payload.result === "win";
           setPhase(won ? "win" : "lose");
+          const color = String(payload.color ?? pocketColor(n));
+          if (Number.isFinite(n)) {
+            setRecentNumbers((prev) => {
+              const next = [
+                ...prev,
+                { number: n, color, at: new Date().toISOString() },
+              ];
+              return next.slice(-10);
+            });
+          }
           if (vibeOn) vibrate(won ? [40, 40, 100] : 70);
           if (!won) {
             window.setTimeout(() => setSpots({}), 700);
@@ -464,6 +481,34 @@ export function CasinoRoulette({
           <span className="euro-ball" aria-hidden />
         </div>
         <div className="euro-hub font-display">★</div>
+      </div>
+
+      <div className="ruleta-recent" aria-label="Últimos resultados">
+        <p className="ruleta-recent-label">Últimos 10</p>
+        <div className="ruleta-recent-track">
+          {recentNumbers.length ? (
+            recentNumbers.map((hit, i) => {
+              const c =
+                hit.color === "red" || hit.color === "black" || hit.color === "green"
+                  ? hit.color
+                  : pocketColor(hit.number);
+              const isLatest = i === recentNumbers.length - 1;
+              return (
+                <span
+                  key={`${hit.number}-${hit.at ?? i}`}
+                  className={`ruleta-recent-ball ruleta-ball-${c} ${
+                    isLatest ? "is-latest" : ""
+                  }`}
+                  title={isLatest ? "Último número" : undefined}
+                >
+                  {hit.number}
+                </span>
+              );
+            })
+          ) : (
+            <span className="text-xs text-[var(--muted)]">Aún no hay historial en la mesa.</span>
+          )}
+        </div>
       </div>
 
       {phase === "bet" || phase === "spin" ? (
