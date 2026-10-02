@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { spinSocialRouletteAction } from "@/app/actions";
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
@@ -24,6 +23,13 @@ const RARITY_GLOW: Record<Rarity, string> = {
   rare: "rgba(96,165,250,0.55)",
   epic: "rgba(167,139,250,0.65)",
   legendary: "rgba(240,162,2,0.75)",
+};
+
+const RARITY_LABEL: Record<Rarity, string> = {
+  common: "Comun",
+  rare: "Rara",
+  epic: "Epica",
+  legendary: "Legendaria",
 };
 
 type SpinResult = {
@@ -66,7 +72,6 @@ function playTick(freq = 520) {
 }
 
 export function SocialRoulette() {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -74,8 +79,8 @@ export function SocialRoulette() {
   const [error, setError] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [vibeOn, setVibeOn] = useState(true);
-  const [showFullscreen, setShowFullscreen] = useState(false);
   const tickRef = useRef<number | null>(null);
+  const doneTimer = useRef<number | null>(null);
   const segAngle = 360 / SEGMENTS.length;
 
   const conic = useMemo(() => {
@@ -93,13 +98,25 @@ export function SocialRoulette() {
     }
   }
 
-  useEffect(() => () => stopTicks(), []);
+  useEffect(
+    () => () => {
+      stopTicks();
+      if (doneTimer.current != null) window.clearTimeout(doneTimer.current);
+    },
+    [],
+  );
+
+  function exitGame() {
+    stopTicks();
+    if (doneTimer.current != null) window.clearTimeout(doneTimer.current);
+    // Hard nav: soft router.push a /app fallaba con el overlay encima.
+    window.location.assign("/app");
+  }
 
   function spin() {
     if (spinning || pending) return;
     setError(null);
     setResult(null);
-    setShowFullscreen(false);
     setSpinning(true);
 
     startTransition(async () => {
@@ -111,16 +128,18 @@ export function SocialRoulette() {
           return;
         }
         const payload = (r?.payload ?? {}) as SpinResult;
-        const idx =
-          typeof payload.index === "number"
+        const idx = Math.max(
+          0,
+          typeof payload.index === "number" && payload.index >= 0 && payload.index < SEGMENTS.length
             ? payload.index
-            : Math.max(
-                0,
-                SEGMENTS.findIndex((s) => s.key === payload.result),
-              );
-        const target =
-          rotation + 360 * 7 + (360 - (idx * segAngle + segAngle / 2));
-        setRotation(target);
+            : SEGMENTS.findIndex((s) => s.key === payload.result),
+        );
+        const pocketAngle = idx * segAngle + segAngle / 2;
+        setRotation((w) => {
+          const current = ((w % 360) + 360) % 360;
+          const delta = (360 - ((pocketAngle + current) % 360)) % 360;
+          return w + 360 * 7 + delta;
+        });
 
         if (vibeOn) vibrate(25);
         if (soundOn) {
@@ -133,14 +152,13 @@ export function SocialRoulette() {
           }, 85);
         }
 
-        window.setTimeout(() => {
+        if (doneTimer.current != null) window.clearTimeout(doneTimer.current);
+        doneTimer.current = window.setTimeout(() => {
           stopTicks();
-          setResult(payload);
+          setResult({ ...payload, index: idx });
           setSpinning(false);
-          setShowFullscreen(true);
           if (soundOn) playTick(780);
           if (vibeOn) vibrate([40, 30, 90]);
-          router.refresh();
         }, 5200);
       } catch {
         stopTicks();
@@ -195,7 +213,7 @@ export function SocialRoulette() {
         <div
           className="social-wheel"
           style={{
-            background: `conic-gradient(from -90deg, ${conic})`,
+            background: `conic-gradient(from 0deg, ${conic})`,
             transform: `rotate(${rotation}deg)`,
             transition: spinning
               ? "transform 5.2s cubic-bezier(0.08, 0.7, 0.05, 1)"
@@ -207,7 +225,7 @@ export function SocialRoulette() {
               key={s.key}
               className={`social-wheel-label rarity-${s.rarity}`}
               style={{
-                transform: `rotate(${(i + 0.5) * segAngle}deg)`,
+                ["--a" as string]: `${(i + 0.5) * segAngle}deg`,
                 textShadow: `0 0 10px ${RARITY_GLOW[s.rarity]}`,
               }}
             >
@@ -221,7 +239,31 @@ export function SocialRoulette() {
 
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
-      {!result ? (
+      {result && seg ? (
+        <div className={`social-result-card rarity-bg-${seg.rarity}`}>
+          <p className="social-result-emoji" aria-hidden>
+            {seg.emoji}
+          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--gold)]">
+            {RARITY_LABEL[seg.rarity]}
+          </p>
+          <h3 className="font-display text-3xl text-[var(--ink-strong)]">{seg.label}</h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">¡A cumplir el destino!</p>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={spinning || pending}
+              onClick={spin}
+              className="mega-cta !min-h-14 !text-base"
+            >
+              🔄 Otra vez
+            </button>
+            <button type="button" onClick={exitGame} className="btn-primary min-h-14 text-base">
+              🚪 Salir
+            </button>
+          </div>
+        </div>
+      ) : (
         <button
           type="button"
           disabled={spinning || pending}
@@ -230,69 +272,7 @@ export function SocialRoulette() {
         >
           {spinning || pending ? "Girando…" : "🎡 Girar"}
         </button>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            disabled={spinning || pending}
-            onClick={spin}
-            className="mega-cta !min-h-14 !text-base"
-          >
-            🔄 Jugar otra vez
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/app/games")}
-            className="btn-primary min-h-14 text-base"
-          >
-            🚪 Salir
-          </button>
-        </div>
       )}
-
-      {showFullscreen && seg ? (
-        <div
-          className={`social-result-overlay rarity-bg-${seg.rarity}`}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="social-result-burst" aria-hidden />
-          <p className="social-result-emoji">{seg.emoji}</p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--gold)]">
-            {seg.rarity === "legendary"
-              ? "Legendaria"
-              : seg.rarity === "epic"
-                ? "Epica"
-                : seg.rarity === "rare"
-                  ? "Rara"
-                  : "Comun"}
-          </p>
-          <h3 className="font-display text-4xl sm:text-5xl">{seg.label}</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">¡A cumplir el destino!</p>
-          <div className="mt-6 grid w-full max-w-sm grid-cols-2 gap-3 px-4">
-            <button
-              type="button"
-              className="mega-cta !min-h-14 !text-base"
-              onClick={() => {
-                setShowFullscreen(false);
-                spin();
-              }}
-            >
-              🔄 Otra vez
-            </button>
-            <button
-              type="button"
-              className="btn-primary min-h-14 text-base"
-              onClick={() => {
-                setShowFullscreen(false);
-                router.push("/app/games");
-              }}
-            >
-              🚪 Salir
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

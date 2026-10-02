@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { updateProfileAction, claimBirthdayAction } from "@/app/actions";
 import { SubmitButton } from "@/components/auth-form";
 import { xpProgress } from "@/lib/domain";
@@ -78,6 +79,28 @@ const BANNERS: Array<{ id: string; label: string; css: string }> = [
     css: "linear-gradient(135deg,#052e16,#14532d 50%,#0b1512)",
   },
 ];
+
+const BANNER_ALIASES: Record<string, string> = {
+  banner_night: "banner:night",
+  banner_premium_bar: "banner:casino",
+  banner_weekend_party: "banner:ember",
+  banner_rare_storm: "banner:teal",
+  banner_founder: "banner:gold",
+};
+
+function normalizeBannerId(raw: string | null | undefined): string {
+  if (!raw) return BANNERS[0].id;
+  return BANNER_ALIASES[raw] ?? raw;
+}
+
+function normalizeFrameId(raw: string | null | undefined): string {
+  if (!raw) return "gold";
+  if (raw === "teal" || raw.includes("teal")) return "teal";
+  if (raw === "rose" || raw.includes("rose") || raw.includes("fire")) return "rose";
+  if (raw === "none") return "none";
+  return "gold";
+}
+
 const FRAMES = [
   { id: "gold", label: "Oro", className: "frame-gold" },
   { id: "teal", label: "Teal", className: "frame-teal" },
@@ -107,55 +130,57 @@ export function ProfileEditor({
   const [ok, setOk] = useState(false);
   const [bdayMsg, setBdayMsg] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const router = useRouter();
   const progress = xpProgress(Number(profile.xp));
   const showBirthday = isBirthdayToday(profile.birth_date);
-  const initial = useMemo(() => parseBirthParts(profile.birth_date), [profile.birth_date]);
-  const years = useMemo(() => {
-    const now = new Date().getFullYear();
-    return Array.from({ length: now - 1900 + 1 }, (_, i) => now - i);
-  }, []);
+  const initial = parseBirthParts(profile.birth_date);
+  const nowYear = new Date().getFullYear();
+  const years = Array.from({ length: nowYear - 1900 + 1 }, (_, i) => nowYear - i);
 
   const cosmetics = profile.equipped_cosmetics ?? {};
   const [avatar, setAvatar] = useState(
     avatarValue(profile.avatar_url) || AVATARS[0],
   );
-  const [banner, setBanner] = useState(profile.banner_url || BANNERS[0].id);
-  const [frame, setFrame] = useState(cosmetics.frame || "gold");
+  const [banner, setBanner] = useState(normalizeBannerId(profile.banner_url));
+  const [frame, setFrame] = useState(normalizeFrameId(cosmetics.frame));
   const [bg, setBg] = useState(cosmetics.bg || "default");
   const [titleCode, setTitleCode] = useState(profile.equipped_title_code || "");
+  const [displayName, setDisplayName] = useState(profile.display_name);
+
+  useEffect(() => {
+    setAvatar(avatarValue(profile.avatar_url) || AVATARS[0]);
+    setBanner(normalizeBannerId(profile.banner_url));
+    setFrame(normalizeFrameId(profile.equipped_cosmetics?.frame));
+    setBg(profile.equipped_cosmetics?.bg || "default");
+    setTitleCode(profile.equipped_title_code || "");
+    setDisplayName(profile.display_name);
+  }, [
+    profile.avatar_url,
+    profile.banner_url,
+    profile.display_name,
+    profile.equipped_title_code,
+    profile.equipped_cosmetics?.frame,
+    profile.equipped_cosmetics?.bg,
+  ]);
 
   const bannerCss =
     BANNERS.find((b) => b.id === banner)?.css ??
     (banner.startsWith("http") ? `center/cover url(${banner})` : BANNERS[0].css);
   const frameClass = FRAMES.find((f) => f.id === frame)?.className ?? "";
+  const activeTitle =
+    titles?.find((t) => t.code === titleCode)?.name ?? profile.title ?? "Novato";
 
   return (
-    <div className="space-y-6" data-profile-bg={bg}>
-      <div className="profile-banner">
-        <div className="profile-banner-inner" style={{ background: bannerCss }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(7,16,14,0.92)] via-transparent to-transparent" />
-        <div className="relative flex items-end gap-4 p-5 pt-14">
-          <div
-            className={`flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-[var(--amber)] bg-[rgba(7,16,14,0.85)] font-display text-3xl ${frameClass}`}
-          >
-            {avatar}
-          </div>
-          <div className="min-w-0 flex-1 pb-1">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--amber)]">
-              {profile.title ?? "Novato"}
-            </p>
-            <p className="truncate font-display text-2xl">{profile.display_name}</p>
-            <p className="text-xs text-[var(--muted)]">
-              Nv.{progress.level} · {Number(profile.token_balance ?? 0).toLocaleString("es-ES")} ★
-            </p>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4" data-profile-bg={bg}>
       {showBirthday ? (
-        <div className="surface border-[var(--amber)] p-5">
-          <p className="font-display text-2xl text-[var(--amber)]">¡Feliz cumpleaños!</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">Reclama +300 puntos y +300 fichas.</p>
+        <div className="premium-banner p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--gold)]">
+            Cumpleaños
+          </p>
+          <p className="mt-1 font-display text-2xl text-[var(--amber)]">¡Feliz cumpleaños!</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Reclama +300 puntos y +300 fichas.
+          </p>
           <form
             className="mt-3"
             action={() => {
@@ -174,19 +199,32 @@ export function ProfileEditor({
         </div>
       ) : null}
 
-      <div className="surface p-5">
-        <h2 className="font-display text-2xl">Editar perfil</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Avatar, banner, título y cosméticos en una sola pantalla.
-        </p>
-        <p className="mt-2 text-xs text-[var(--muted)]">
-          Código amigo:{" "}
-          <span className="tracking-widest text-[var(--teal)]">{profile.friend_code ?? "—"}</span>
-        </p>
+      <div className="profile-editor-panel">
+        <div className="profile-banner !rounded-none !border-0">
+          <div className="profile-banner-inner" style={{ background: bannerCss }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-[rgba(7,16,14,0.95)] via-[rgba(7,16,14,0.35)] to-transparent" />
+          <div className="relative flex items-end gap-4 p-5 pt-14">
+            <div
+              className={`flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-[var(--amber)] bg-[rgba(7,16,14,0.85)] font-display text-3xl ${frameClass}`}
+            >
+              {avatar}
+            </div>
+            <div className="min-w-0 flex-1 pb-1">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--amber)]">
+                {activeTitle}
+              </p>
+              <p className="truncate font-display text-2xl">{displayName}</p>
+              <p className="text-xs text-[var(--muted)]">
+                Nv.{progress.level} ·{" "}
+                {Number(profile.token_balance ?? 0).toLocaleString("es-ES")} ★
+              </p>
+            </div>
+          </div>
+        </div>
 
         <form
-          className="mt-4 flex flex-col gap-5"
-          action={(fd) => {
+          className="flex flex-col"
+          action={async (fd) => {
             setError(null);
             setOk(false);
             fd.set("avatar_url", `emoji:${avatar}`);
@@ -194,26 +232,45 @@ export function ProfileEditor({
             fd.set("frame", frame);
             fd.set("bg", bg);
             if (titleCode) fd.set("equipped_title_code", titleCode);
-            startTransition(async () => {
-              const result = await updateProfileAction(fd);
-              if (result?.error) setError(result.error);
-              else setOk(true);
-            });
+            const result = await updateProfileAction(fd);
+            if (result?.error) {
+              setError(result.error);
+              return;
+            }
+            const nextName = String(fd.get("display_name") ?? "").trim();
+            if (nextName) setDisplayName(nextName);
+            setOk(true);
+            router.refresh();
           }}
         >
-          <label className="flex flex-col gap-2">
-            <span className="text-sm text-[var(--muted)]">Nombre</span>
-            <input
-              className="input"
-              name="display_name"
-              defaultValue={profile.display_name}
-              required
-              maxLength={40}
-            />
-          </label>
+          <div className="profile-editor-section">
+            <p className="profile-section-label">Identidad</p>
+            <h2 className="mt-1 font-display text-2xl">Personalizar</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Avatar, banner y cosméticos. Vista previa en vivo arriba.
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              Código amigo:{" "}
+              <span className="tracking-widest text-[var(--teal)]">
+                {profile.friend_code ?? "—"}
+              </span>
+            </p>
 
-          <div>
-            <p className="mb-2 text-sm text-[var(--muted)]">Avatar</p>
+            <label className="mt-4 flex flex-col gap-2">
+              <span className="text-sm text-[var(--muted)]">Nombre</span>
+              <input
+                className="input"
+                name="display_name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                maxLength={40}
+              />
+            </label>
+          </div>
+
+          <div className="profile-editor-section">
+            <p className="profile-section-label mb-3">Avatar</p>
             <div className="profile-edit-grid">
               {AVATARS.map((a) => (
                 <button
@@ -230,8 +287,8 @@ export function ProfileEditor({
             </div>
           </div>
 
-          <div>
-            <p className="mb-2 text-sm text-[var(--muted)]">Banner</p>
+          <div className="profile-editor-section">
+            <p className="profile-section-label mb-3">Banner</p>
             <div className="grid grid-cols-3 gap-2">
               {BANNERS.map((b) => (
                 <button
@@ -249,8 +306,8 @@ export function ProfileEditor({
             </div>
           </div>
 
-          <div>
-            <p className="mb-2 text-sm text-[var(--muted)]">Marco</p>
+          <div className="profile-editor-section">
+            <p className="profile-section-label mb-3">Marco</p>
             <div className="grid grid-cols-4 gap-2">
               {FRAMES.map((f) => (
                 <button
@@ -269,8 +326,8 @@ export function ProfileEditor({
             </div>
           </div>
 
-          <div>
-            <p className="mb-2 text-sm text-[var(--muted)]">Fondo</p>
+          <div className="profile-editor-section">
+            <p className="profile-section-label mb-3">Fondo</p>
             <div className="grid grid-cols-4 gap-2">
               {BACKGROUNDS.map((b) => (
                 <button
@@ -290,65 +347,79 @@ export function ProfileEditor({
           </div>
 
           {(titles ?? []).length > 0 ? (
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--muted)]">Título activo</span>
-              <select
-                className="input min-h-12"
-                value={titleCode}
-                onChange={(e) => setTitleCode(e.target.value)}
-              >
-                <option value="">Mantener actual</option>
+            <div className="profile-editor-section">
+              <p className="profile-section-label mb-3">Título activo</p>
+              <div className="flex flex-wrap gap-2">
                 {titles!.map((t) => (
-                  <option key={t.code} value={t.code}>
+                  <button
+                    key={t.code}
+                    type="button"
+                    onClick={() => setTitleCode(t.code)}
+                    className={`rounded-2xl border px-3 py-2 text-sm ${
+                      titleCode === t.code
+                        ? "border-[var(--amber)] bg-[color-mix(in_srgb,var(--amber)_12%,transparent)]"
+                        : "border-[var(--line)]"
+                    }`}
+                  >
                     {t.emoji} {t.name}
-                  </option>
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
           ) : null}
 
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm text-[var(--muted)]">Fecha de nacimiento</legend>
-            <div className="grid grid-cols-3 gap-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Día</span>
-                <select className="input" name="birth_day" defaultValue={initial.day}>
-                  <option value="">—</option>
-                  {DAYS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Mes</span>
-                <select className="input" name="birth_month" defaultValue={initial.month}>
-                  <option value="">—</option>
-                  {MONTHS.map(([n, label]) => (
-                    <option key={n} value={n}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Año</span>
-                <select className="input" name="birth_year" defaultValue={initial.year}>
-                  <option value="">—</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </fieldset>
+          <div className="profile-editor-section">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="profile-section-label">Fecha de nacimiento</legend>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                    Día
+                  </span>
+                  <select className="input" name="birth_day" defaultValue={initial.day}>
+                    <option value="">—</option>
+                    {DAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                    Mes
+                  </span>
+                  <select className="input" name="birth_month" defaultValue={initial.month}>
+                    <option value="">—</option>
+                    {MONTHS.map(([n, label]) => (
+                      <option key={n} value={n}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                    Año
+                  </span>
+                  <select className="input" name="birth_year" defaultValue={initial.year}>
+                    <option value="">—</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </fieldset>
+          </div>
 
-          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
-          {ok ? <p className="text-sm text-[var(--teal)]">Perfil actualizado.</p> : null}
-          <SubmitButton>Guardar perfil</SubmitButton>
+          <div className="profile-editor-section space-y-3">
+            {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+            {ok ? <p className="text-sm text-[var(--teal)]">Perfil actualizado.</p> : null}
+            <SubmitButton>Guardar perfil</SubmitButton>
+          </div>
         </form>
       </div>
     </div>

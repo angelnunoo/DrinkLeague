@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 type TabKey = "stats" | "trophies" | "achievements" | "chemistry" | "bets" | "games";
 
@@ -19,10 +18,7 @@ export function ProfileTabs({
 }: {
   panels: Partial<Record<TabKey, ReactNode>>;
 }) {
-  const available = useMemo(
-    () => TABS.filter((t) => panels[t.key] != null),
-    [panels],
-  );
+  const available = TABS.filter((t) => panels[t.key] != null);
   const [tab, setTab] = useState<TabKey>(available[0]?.key ?? "stats");
 
   return (
@@ -33,25 +29,13 @@ export function ProfileTabs({
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`min-h-11 shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold ${
-              tab === t.key
-                ? "bg-[var(--ink)] text-[#0b1512]"
-                : "border border-[var(--line)] text-[var(--muted)]"
-            }`}
+            className={`profile-tab ${tab === t.key ? "is-active" : ""}`}
           >
             {t.label}
           </button>
         ))}
       </div>
-      <div className="min-h-[12rem]">{panels[tab]}</div>
-      <div className="grid grid-cols-2 gap-3 pt-2">
-        <Link href="/app/bets" className="surface p-4 text-center">
-          <p className="font-display text-lg">Apuestas</p>
-        </Link>
-        <Link href="/app/games" className="surface p-4 text-center">
-          <p className="font-display text-lg">Juegos</p>
-        </Link>
-      </div>
+      <div className="min-h-[12rem] animate-rise">{panels[tab]}</div>
     </div>
   );
 }

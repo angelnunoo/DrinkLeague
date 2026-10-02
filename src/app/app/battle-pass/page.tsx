@@ -2,14 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
-import { claimBattlePassAction } from "@/app/actions";
+import { claimAllBattlePassAction, claimBattlePassAction } from "@/app/actions";
 import { xpProgress } from "@/lib/domain";
 import { XpBar } from "@/components/ui/xp-bar";
 
 export default async function BattlePassPage({
   searchParams,
 }: {
-  searchParams: Promise<{ claimed?: string; error?: string }>;
+  searchParams: Promise<{ claimed?: string; n?: string; error?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
@@ -79,9 +79,13 @@ export default async function BattlePassPage({
         </div>
       </div>
 
-      {sp.claimed ? (
+      {sp.claimed === "all" ? (
         <p className="rounded-xl bg-[color-mix(in_srgb,var(--teal)_15%,transparent)] px-3 py-2 text-sm text-[var(--teal)]">
-          🎁 Nivel {sp.claimed} reclamado.
+          🎁 {sp.n ?? "Todas"} recompensas aplicadas al momento.
+        </p>
+      ) : sp.claimed ? (
+        <p className="rounded-xl bg-[color-mix(in_srgb,var(--teal)_15%,transparent)] px-3 py-2 text-sm text-[var(--teal)]">
+          🎁 Nivel {sp.claimed} reclamado y aplicado.
         </p>
       ) : null}
       {sp.error ? <p className="text-sm text-[var(--danger)]">{sp.error}</p> : null}
@@ -134,9 +138,16 @@ export default async function BattlePassPage({
       {/* Claimable spotlight */}
       {claimable.length ? (
         <div className="premium-banner p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--gold)]">
-            Listas para reclamar
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--gold)]">
+              Listas para reclamar
+            </p>
+            <form action={claimAllBattlePassAction}>
+              <button type="submit" className="btn-primary px-3 py-1.5 text-xs">
+                Reclamar todo ({claimable.length})
+              </button>
+            </form>
+          </div>
           <ul className="mt-3 space-y-2">
             {claimable.slice(0, 4).map((lv) => (
               <li

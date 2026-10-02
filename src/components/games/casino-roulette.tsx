@@ -223,8 +223,20 @@ export function CasinoRoulette({
         const n = Number(payload.number ?? 0);
         const idx = WHEEL_ORDER.findIndex((x) => x === n);
         const pocketAngle = (idx >= 0 ? idx : 0) * SEG + SEG / 2;
-        setWheelRot((w) => w + 360 * 6 + (360 - pocketAngle));
-        setBallRot((b) => b - 360 * 8 - pocketAngle);
+
+        // Pointer is fixed at 12 o'clock. Bring the winning pocket under it,
+        // accounting for the wheel's current rotation from previous spins.
+        setWheelRot((w) => {
+          const current = ((w % 360) + 360) % 360;
+          const delta = (360 - ((pocketAngle + current) % 360)) % 360;
+          return w + 360 * 6 + delta;
+        });
+        // Ball sits at the top of its track — land it under the pointer (not
+        // at pocketAngle, which put it opposite the result for ~180° pockets).
+        setBallRot((b) => {
+          const current = ((b % 360) + 360) % 360;
+          return b - current - 360 * 8;
+        });
 
         if (vibeOn) vibrate(20);
         if (soundOn) {
@@ -343,7 +355,7 @@ export function CasinoRoulette({
         <div
           className="euro-wheel"
           style={{
-            background: `conic-gradient(from -90deg, ${conic})`,
+            background: `conic-gradient(from 0deg, ${conic})`,
             transform: `rotate(${wheelRot}deg)`,
             transition: spinning
               ? "transform 5.2s cubic-bezier(0.08, 0.72, 0.05, 1)"
@@ -354,7 +366,7 @@ export function CasinoRoulette({
             <span
               key={n}
               className="euro-label"
-              style={{ transform: `rotate(${i * SEG + SEG / 2}deg)` }}
+              style={{ ["--a" as string]: `${i * SEG + SEG / 2}deg` }}
             >
               {n}
             </span>

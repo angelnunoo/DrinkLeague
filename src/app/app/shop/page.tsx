@@ -7,7 +7,7 @@ import { PremiumShop, type ShopCardItem } from "@/components/premium-shop";
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bought?: string; equipped?: string }>;
+  searchParams: Promise<{ bought?: string; equipped?: string; error?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
@@ -28,47 +28,69 @@ export default async function ShopPage({
   const ownedMap: Record<string, boolean> = {};
   for (const o of owned ?? []) ownedMap[o.item_id] = o.equipped === true;
   const balance = Number(profile.token_balance ?? 0);
+  const ownedCount = Object.keys(ownedMap).length;
+  const catalogCount = (items ?? []).length;
 
   return (
-    <section className="animate-rise space-y-6">
+    <section className="animate-rise space-y-6 pb-4">
       <div className="shop-hero overflow-hidden rounded-3xl border border-[var(--line)] p-5">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">
-          Cosméticos premium
+        <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--amber)]">
+          Cosméticos · Sin pay-to-win
         </p>
-        <h1 className="font-display text-4xl">Tienda</h1>
+        <h1 className="font-display text-4xl text-[var(--ink-strong)]">Tienda</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Marcos · banners · cofres · exclusivos · sin pay-to-win
+          Marcos · banners · cofres · exclusivos
         </p>
-        <div className="mt-4 flex items-end justify-between">
+        <div className="mt-4 flex items-end justify-between gap-3">
           <div>
             <p className="text-[10px] uppercase text-[var(--muted)]">Tu saldo</p>
-            <p className="font-display text-3xl text-[var(--amber)]">
+            <p className="font-display text-4xl text-[var(--amber)]">
               {balance.toLocaleString("es-ES")} ★
             </p>
           </div>
-          <Link href="/app/casino" className="btn-ghost min-h-11 text-xs">
-            🎰 Ganar fichas
-          </Link>
+          <div className="text-right">
+            <p className="text-[10px] uppercase text-[var(--muted)]">Inventario</p>
+            <p className="font-display text-2xl">
+              {ownedCount}
+              <span className="text-sm text-[var(--muted)]">/{catalogCount}</span>
+            </p>
+          </div>
         </div>
+        <Link href="/app/casino" className="mega-cta mt-4 !min-h-12 !text-base">
+          Ganar fichas en DrinkCasino
+        </Link>
       </div>
 
       {sp.bought ? (
-        <p className="rounded-xl bg-[color-mix(in_srgb,var(--teal)_15%,transparent)] px-3 py-2 text-sm text-[var(--teal)]">
-          ✨ Compra realizada. ¡Luce espectacular!
+        <p className="rounded-2xl bg-[color-mix(in_srgb,var(--teal)_15%,transparent)] px-4 py-3 text-sm text-[var(--teal)] animate-pop">
+          Compra realizada. ¡Luce espectacular!
         </p>
       ) : null}
       {sp.equipped ? (
-        <p className="rounded-xl bg-[color-mix(in_srgb,var(--amber)_15%,transparent)] px-3 py-2 text-sm">
+        <p className="rounded-2xl bg-[color-mix(in_srgb,var(--amber)_15%,transparent)] px-4 py-3 text-sm animate-pop">
           Cosmético equipado en tu perfil.
         </p>
       ) : null}
+      {sp.error ? (
+        <p className="rounded-2xl bg-[color-mix(in_srgb,var(--danger)_15%,transparent)] px-4 py-3 text-sm text-[var(--danger)]">
+          {decodeURIComponent(sp.error)}
+        </p>
+      ) : null}
 
-      <div className="flex flex-wrap gap-2 text-[11px]">
-        <span className="shop-pill shop-rarity-common">⚪ Común</span>
-        <span className="shop-pill shop-rarity-rare">🔵 Raro</span>
-        <span className="shop-pill shop-rarity-epic">🟣 Épico</span>
-        <span className="shop-pill shop-rarity-legendary">🟡 Legendario</span>
-        <span className="shop-pill shop-rarity-mythic">💎 Mítico</span>
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["common", "Común"],
+            ["rare", "Raro"],
+            ["epic", "Épico"],
+            ["legendary", "Legendario"],
+            ["mythic", "Mítico"],
+          ] as const
+        ).map(([key, label]) => (
+          <span key={key} className={`shop-pill shop-rarity-${key}`}>
+            {label}
+          </span>
+        ))}
       </div>
 
       <PremiumShop
@@ -79,19 +101,32 @@ export default async function ShopPage({
         currentTitle={profile.title ?? "Novato"}
       />
 
-      <div className="surface space-y-2 p-4 text-sm text-[var(--muted)]">
-        <p className="font-display text-lg text-[var(--ink)]">Ofertas</p>
-        <p>🔥 Oferta del Día · rotación diaria automática</p>
-        <p>⚡ Fin de semana · mira los cofres épicos</p>
-        <p>👑 Exclusivos temporada · Fundador / Casino / Campeones</p>
+      <div className="premium-banner space-y-2 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--gold)]">
+          Rotación
+        </p>
+        <p className="font-display text-xl">Ofertas y exclusivos</p>
+        <ul className="space-y-1 text-sm text-[var(--muted)]">
+          <li>Oferta del día · rota automáticamente cada 24 h</li>
+          <li>Cofres épicos · mayor rareza, mejor botín</li>
+          <li>Exclusivos de temporada · Fundador · Casino · Campeones</li>
+        </ul>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link href="/app/casino" className="surface min-h-14 p-4 text-center font-display text-lg">
-          DrinkCasino
+        <Link
+          href="/app/casino"
+          className="surface flex min-h-16 flex-col items-center justify-center p-4 text-center transition active:scale-[0.98]"
+        >
+          <p className="font-display text-lg">DrinkCasino</p>
+          <p className="text-[10px] text-[var(--muted)]">Gana fichas</p>
         </Link>
-        <Link href="/app/profile" className="surface min-h-14 p-4 text-center font-display text-lg">
-          Mi perfil
+        <Link
+          href="/app/profile"
+          className="surface flex min-h-16 flex-col items-center justify-center p-4 text-center transition active:scale-[0.98]"
+        >
+          <p className="font-display text-lg">Mi perfil</p>
+          <p className="text-[10px] text-[var(--muted)]">Equipar look</p>
         </Link>
       </div>
     </section>

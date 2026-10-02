@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { DrinkItemInput } from "@/lib/types";
@@ -349,40 +350,23 @@ export async function updateProfileAction(formData: FormData): Promise<ActionRes
   const bgRaw = String(formData.get("bg") ?? "").trim();
   const titleCode = String(formData.get("equipped_title_code") ?? "").trim();
 
-  const { data: current } = await supabase
-    .from("users")
-    .select("equipped_cosmetics")
-    .eq("id", user.id)
-    .maybeSingle();
-  const cosmetics = {
-    ...((current?.equipped_cosmetics as Record<string, string> | null) ?? {}),
-  };
-  if (frameRaw) cosmetics.frame = frameRaw.slice(0, 40);
-  if (bgRaw) cosmetics.bg = bgRaw.slice(0, 40);
+  const cosmeticsPatch: Record<string, string> = {};
+  if (frameRaw) cosmeticsPatch.frame = frameRaw.slice(0, 40);
+  if (bgRaw) cosmeticsPatch.bg = bgRaw.slice(0, 40);
 
-  const { error } = await supabase
-    .from("users")
-    .update({
-      display_name: displayName.slice(0, 40),
-      ...(birthDate ? { birth_date: birthDate } : {}),
-      ...(avatarRaw ? { avatar_url: avatarRaw.slice(0, 200) } : {}),
-      ...(bannerRaw ? { banner_url: bannerRaw.slice(0, 200) } : {}),
-      equipped_cosmetics: cosmetics,
-    })
-    .eq("id", user.id);
+  const { error } = await supabase.rpc("update_my_profile", {
+    p_display_name: displayName.slice(0, 40),
+    p_avatar_url: avatarRaw || null,
+    p_banner_url: bannerRaw || null,
+    p_cosmetics: Object.keys(cosmeticsPatch).length ? cosmeticsPatch : null,
+    p_birth_date: birthDate,
+    p_title_code: titleCode || null,
+  });
 
   if (error) return { error: friendlyLeagueError(error.message) };
 
-  if (birthDate) {
-    const { error: bdErr } = await supabase.rpc("update_birth_date", { p_date: birthDate });
-    if (bdErr) return { error: friendlyLeagueError(bdErr.message) };
-  }
-
-  if (titleCode) {
-    const { error: titleErr } = await supabase.rpc("equip_title", { p_code: titleCode });
-    if (titleErr) return { error: friendlyLeagueError(titleErr.message) };
-  }
-
+  revalidatePath("/app/profile");
+  revalidatePath("/app");
   return { success: true, message: "Perfil actualizado." };
 }
 
@@ -391,6 +375,14 @@ export async function purchaseShopItemAction(itemId: string): Promise<void> {
   const { error } = await supabase.rpc("purchase_shop_item", { p_item_id: itemId });
   if (error) redirect(`/app/shop?error=${encodeURIComponent(error.message)}`);
   redirect("/app/shop?bought=1");
+}
+
+export async function openShopChestAction(itemId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("open_shop_chest", { p_item_id: itemId });
+  if (error) return { error: friendlyLeagueError(error.message) || error.message };
+  // Don't revalidate here — refreshing mid-animation unmounts the chest overlay.
+  return { success: true, payload: (data ?? {}) as Record<string, unknown> };
 }
 
 export async function equipShopItemAction(itemId: string): Promise<void> {
@@ -870,7 +862,23 @@ export async function claimBattlePassAction(level: number): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("claim_battle_pass_level", { p_level: level });
   if (error) redirect(`/app/battle-pass?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/app/battle-pass");
+  revalidatePath("/app/profile");
+  revalidatePath("/app/shop");
+  revalidatePath("/app");
   redirect(`/app/battle-pass?claimed=${level}`);
+}
+
+export async function claimAllBattlePassAction(): Promise<void> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("claim_all_battle_pass_levels");
+  if (error) redirect(`/app/battle-pass?error=${encodeURIComponent(error.message)}`);
+  const claimed = Number((data as { claimed?: number } | null)?.claimed ?? 0);
+  revalidatePath("/app/battle-pass");
+  revalidatePath("/app/profile");
+  revalidatePath("/app/shop");
+  revalidatePath("/app");
+  redirect(`/app/battle-pass?claimed=all&n=${claimed}`);
 }
 
 export async function generateWrappedAction(formData?: FormData): Promise<void> {
